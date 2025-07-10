@@ -24,8 +24,16 @@ def render_sidebar():
             label_visibility="collapsed"
         )
         
-        if selected_provider != config.LLM_PROVIDER:
-            st.warning("⚠️ Provider change requires restart")
+        # Initialize provider in session state if not present
+        if "current_provider" not in st.session_state:
+            st.session_state.current_provider = config.LLM_PROVIDER
+            
+        # Update agent if provider changed
+        if selected_provider != st.session_state.current_provider:
+            st.session_state.current_provider = selected_provider
+            if "agent" in st.session_state:
+                from agent.factory import create_agent
+                st.session_state.agent = create_agent("default", provider=selected_provider)
         
         st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
         

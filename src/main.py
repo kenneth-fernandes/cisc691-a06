@@ -56,6 +56,17 @@ def apply_custom_css():
             border-radius: 8px;
             margin: 0.5rem 0;
         }
+        
+        /* Chat layout */
+        .stChatInputContainer {
+            background: var(--background-color);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .main .block-container {
+            padding-bottom: 2rem;
+        }
         </style>
     """, unsafe_allow_html=True)
 
