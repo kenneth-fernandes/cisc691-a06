@@ -5,7 +5,9 @@ import os
 import time
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="urllib3")
-from src.agent.factory import create_agent
+import sys
+sys.path.append("src")
+from agent.factory import create_agent
 
 def test_agent():
     """Test the AI agent functionality"""

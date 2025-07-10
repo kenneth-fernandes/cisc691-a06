@@ -2,7 +2,7 @@
 Agent factory for creating different types of AI agents
 """
 from .core import AIAgent
-from ..utils.config import get_config
+from utils.config import get_config
 
 def create_agent(agent_type: str = "default", provider: str = None) -> AIAgent:
     """Factory function to create different types of agents"""
