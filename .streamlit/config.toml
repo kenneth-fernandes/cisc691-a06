@@ -1,0 +1,9 @@
+[theme]
+primaryColor = "#FF4B4B"  # Bright red for primary actions
+backgroundColor = "#0E1117"  # Dark background
+secondaryBackgroundColor = "#262730"  # Darker gray for cards/sections
+textColor = "#FAFAFA"  # Almost white text
+font = "sans serif"
+
+[server]
+enableStaticServing = true

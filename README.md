@@ -53,9 +53,28 @@ pip install -r requirements.txt
   ollama pull llama3.2
   ```
 
+## 🚀 Running the Application
+
+1. Start the Streamlit application:
+```bash
+streamlit run src/main.py
+```
+
+2. Access the UI:
+- Open your browser to `http://localhost:8501`
+- Use the sidebar to select your preferred AI provider
+- Start chatting with the AI agent
+
+Features available:
+- 🎨 Dark theme interface
+- 🔄 Real-time provider switching
+- ⏱️ Response timing display
+- 💬 Persistent chat history
+- 🔌 Multiple provider support
+
 ## 🧪 Testing
 
-Run the test script to verify the setup:
+Run the test script to verify the core functionality:
 ```bash
 python test_agent.py
 ```
@@ -85,8 +104,11 @@ OLLAMA_MODEL=llama3.2
 - ✅ Multi-provider support
 - ✅ Basic conversation functionality
 - ✅ Test script with timing
-- 🚧 Streamlit UI (Coming soon)
-- 🚧 Advanced features (Coming soon)
+- ✅ Streamlit UI with dark theme
+- ✅ Dynamic provider switching
+- ✅ Real-time chat interface
+- 🚧 Memory persistence (Coming soon)
+- 🚧 Enhanced error handling (Coming soon)
 
 ## 📝 Assignment Information
 
@@ -109,9 +131,10 @@ This project was developed as part of the CISC 691 - Foundations of Next-Gen AI 
 - Kenneth Peter Fernandes
 
 ### 📋 Future Enhancements
-- Streamlit-based user interface
 - Advanced reasoning capabilities
-- Enhanced memory management
+- Enhanced memory management with persistence
+- Error handling and fallback mechanisms
+- Performance optimizations
 - Additional provider integrations
 
 ---
