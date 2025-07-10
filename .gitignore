@@ -74,3 +74,7 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+
+# Python environment files
+.venv/
