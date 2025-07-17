@@ -16,6 +16,14 @@ A flexible AI agent implementation using LangChain framework that supports multi
   - ⚙️ Configurable system prompts
   - ⏱️ Response timing metrics
 
+- 📊 **US Visa Bulletin Predictions** (NEW):
+  - 📈 Employment-based category forecasting (EB-1, EB-2, EB-3)
+  - 👨‍👩‍👧‍👦 Family-based category predictions (F1, F2A, F2B, F3, F4)
+  - 🌍 Country-specific analysis (India, China, Mexico, Philippines)
+  - 📅 Historical trend analysis and date advancement predictions
+  - 🤖 ML-powered forecasting using Random Forest and Logistic Regression
+  - 📋 Interactive dashboard with charts and visualizations
+
 - 🏗️ Architecture:
   - 🏭 Factory pattern for agent creation
   - 📚 Layered architecture
@@ -107,8 +115,36 @@ OLLAMA_MODEL=llama3.2
 - ✅ Streamlit UI with dark theme
 - ✅ Dynamic provider switching
 - ✅ Real-time chat interface
+- ✅ **Visa bulletin prediction foundation** (NEW)
+- 🚧 Visa data collection and parsing (In progress)
+- 🚧 ML prediction models (Coming soon)
+- 🚧 Interactive visa dashboard (Coming soon)
 - 🚧 Memory persistence (Coming soon)
 - 🚧 Enhanced error handling (Coming soon)
+
+## 🏛️ Visa Bulletin Predictions
+
+The AI agent now includes specialized capabilities for US visa bulletin analysis and predictions:
+
+### 📈 Supported Categories
+- **Employment-Based**: EB-1, EB-2, EB-3, EB-4, EB-5
+- **Family-Based**: F1, F2A, F2B, F3, F4
+
+### 🌍 Country Analysis
+- India, China, Mexico, Philippines (special processing)
+- Worldwide category tracking
+
+### 🔮 Prediction Features
+- Historical trend analysis from 2020-2025
+- Date advancement forecasting
+- Country-specific retrogression patterns
+- Category movement predictions
+
+### 🛠️ Technical Implementation
+- Machine learning models (Random Forest, Logistic Regression)
+- Official State Department data parsing
+- Real-time bulletin updates
+- Interactive visualizations with Plotly
 
 ## 📝 Assignment Information
 
