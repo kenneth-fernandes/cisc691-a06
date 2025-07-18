@@ -84,14 +84,24 @@ Features available:
 
 Run the test script to verify the core functionality:
 ```bash
+# Test core agent functionality
 python test_agent.py
+
+# Test visa bulletin expertise
+python test_visa_agent.py
 ```
 
-The test will:
+Core Agent Test will:
 - 🚀 Initialize the AI agent
 - 💬 Run test conversations
 - ⏱️ Show response timing
 - 📜 Display conversation history
+
+Visa Bulletin Test will:
+- 🔄 Test movement analysis for visa categories
+- 🔮 Generate predictions for future movements
+- 📱 Explain current visa bulletin status
+- 🌍 Provide country-specific insights
 
 ## ⚙️ Configuration
 
@@ -115,16 +125,20 @@ OLLAMA_MODEL=llama3.2
 - ✅ Streamlit UI with dark theme
 - ✅ Dynamic provider switching
 - ✅ Real-time chat interface
-- ✅ **Visa bulletin prediction foundation** (NEW)
+- ✅ **Visa bulletin expertise and analysis** (NEW)
+  - ✅ Category and country-specific insights
+  - ✅ Movement analysis and predictions
+  - ✅ Historical trend analysis
+  - ✅ Expert system prompts and templates
 - 🚧 Visa data collection and parsing (In progress)
 - 🚧 ML prediction models (Coming soon)
 - 🚧 Interactive visa dashboard (Coming soon)
 - 🚧 Memory persistence (Coming soon)
 - 🚧 Enhanced error handling (Coming soon)
 
-## 🏛️ Visa Bulletin Predictions
+## 🏛️ Visa Bulletin Expertise
 
-The AI agent now includes specialized capabilities for US visa bulletin analysis and predictions:
+The AI agent now includes specialized expertise and analytical capabilities for US visa bulletin analysis:
 
 ### 📈 Supported Categories
 - **Employment-Based**: EB-1, EB-2, EB-3, EB-4, EB-5
@@ -134,11 +148,12 @@ The AI agent now includes specialized capabilities for US visa bulletin analysis
 - India, China, Mexico, Philippines (special processing)
 - Worldwide category tracking
 
-### 🔮 Prediction Features
-- Historical trend analysis from 2020-2025
-- Date advancement forecasting
-- Country-specific retrogression patterns
-- Category movement predictions
+### 🔮 Analysis Features
+- Historical trend analysis and pattern recognition
+- Category movement analysis with context
+- Country-specific expertise and insights
+- Data-driven movement predictions
+- Expert-level explanations and analysis
 
 ### 🛠️ Technical Implementation
 - Machine learning models (Random Forest, Logistic Regression)
