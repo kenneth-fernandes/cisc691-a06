@@ -177,12 +177,17 @@ class CountryValidator:
         except ValueError:
             pass
         
+        # Try case-insensitive direct match for enum values
+        for country_code in CountryCode:
+            if country_code.value.lower() == country_str.lower():
+                return country_code.value
+        
         # Try aliases
         normalized = CountryValidator.COUNTRY_ALIASES.get(country_str)
         if normalized:
             return normalized
         
-        # Try case-insensitive match
+        # Try case-insensitive match for aliases
         for alias, standard in CountryValidator.COUNTRY_ALIASES.items():
             if alias.lower() == country_str.lower():
                 return standard
@@ -348,6 +353,9 @@ class DataCleaner:
             if country:
                 cleaned['country'] = country
         
+        # Initialize status
+        status_set = False
+        
         # Clean dates
         for date_field in ['final_action_date', 'filing_date']:
             if date_field in raw_cat_data and raw_cat_data[date_field]:
@@ -357,19 +365,23 @@ class DataCleaner:
                     cleaned[date_field] = parsed_date.isoformat()
                 elif date_str.upper() in ['C', 'CURRENT']:
                     cleaned['status'] = 'C'
+                    status_set = True
                 elif date_str.upper() in ['U', 'UNAVAILABLE']:
                     cleaned['status'] = 'U'
+                    status_set = True
         
-        # Clean status
+        # Clean status (only if not already set from date fields)
         if 'status' in raw_cat_data:
             status = str(raw_cat_data['status']).strip().upper()
             if status in ['C', 'CURRENT']:
                 cleaned['status'] = 'C'
+                status_set = True
             elif status in ['U', 'UNAVAILABLE']:
                 cleaned['status'] = 'U'
-            else:
+                status_set = True
+            elif not status_set:
                 cleaned['status'] = 'DATE'
-        else:
+        elif not status_set:
             cleaned['status'] = 'DATE'  # Default status
         
         # Clean notes

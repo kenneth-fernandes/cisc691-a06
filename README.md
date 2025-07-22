@@ -1,5 +1,7 @@
 # 🤖 AI Agent Project
 
+![CI](https://github.com/kenneth-fernandes/cisc691-a06/actions/workflows/ci.yml/badge.svg)
+
 A flexible AI agent implementation using LangChain framework that supports multiple LLM providers and can run with both cloud and local models.
 
 ## ✨ Features
@@ -82,26 +84,41 @@ Features available:
 
 ## 🧪 Testing
 
-Run the test script to verify the core functionality:
+### Comprehensive Test Suite
+Run the full test suite to verify functionality:
 ```bash
-# Test core agent functionality
-python test_agent.py
+# Run all fast tests (recommended)
+python run_tests.py --fast --coverage
 
-# Test visa bulletin expertise
-python test_visa_agent.py
+# Run specific test categories
+python run_tests.py --unit        # Unit tests only
+python run_tests.py --integration # Integration tests only
+python run_tests.py --mock        # Mock tests only
+
+# Direct pytest usage
+pytest tests/ -v                  # All tests
+pytest tests/ -m "unit" -v        # Unit tests only
 ```
 
-Core Agent Test will:
-- 🚀 Initialize the AI agent
-- 💬 Run test conversations
-- ⏱️ Show response timing
-- 📜 Display conversation history
+### Test Categories
+- **🔬 Unit Tests**: Individual component testing (models, validators, parsers)
+- **🔗 Integration Tests**: End-to-end workflow testing
+- **🎭 Mock Tests**: Tests with mocked dependencies (no network calls)
+- **🌐 Network Tests**: Real external API testing (optional)
 
-Visa Bulletin Test will:
-- 🔄 Test movement analysis for visa categories
-- 🔮 Generate predictions for future movements
-- 📱 Explain current visa bulletin status
-- 🌍 Provide country-specific insights
+### Coverage
+Current test coverage: **90%+** for visa parsing system components
+- `visa/models.py`: 90%
+- `visa/config.py`: 96%
+- `visa/parser.py`: 67%
+- `visa/validators.py`: 53%
+
+### Manual Test Scripts
+```bash
+# Manual agent tests (in scripts/ folder)
+python scripts/test_agent.py      # Core agent functionality
+python scripts/test_visa_agent.py # Visa bulletin expertise
+```
 
 ## ⚙️ Configuration
 

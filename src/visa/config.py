@@ -54,9 +54,12 @@ class VisaConfig:
     @classmethod
     def validate_category(cls, category: str) -> bool:
         """Validate if a category is supported"""
-        return category in cls.EMPLOYMENT_CATEGORIES + cls.FAMILY_CATEGORIES
+        employment_cats = ["EB-1", "EB-2", "EB-3", "EB-4", "EB-5"]
+        family_cats = ["F1", "F2A", "F2B", "F3", "F4"]
+        return category in employment_cats + family_cats
     
     @classmethod
     def validate_country(cls, country: str) -> bool:
         """Validate if a country is in special processing list"""
-        return country in cls.SPECIAL_COUNTRIES or country == "Worldwide"
+        special_countries = ["China", "India", "Mexico", "Philippines"]
+        return country in special_countries or country == "Worldwide"
