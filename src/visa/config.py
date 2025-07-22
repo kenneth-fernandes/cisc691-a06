@@ -3,7 +3,7 @@ Configuration settings for visa bulletin prediction system
 """
 import os
 from typing import Dict, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -15,11 +15,11 @@ class VisaConfig:
     BULLETIN_BASE_URL: str = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin"
     
     # Visa categories
-    EMPLOYMENT_CATEGORIES: List[str] = ["EB-1", "EB-2", "EB-3", "EB-4", "EB-5"]
-    FAMILY_CATEGORIES: List[str] = ["F1", "F2A", "F2B", "F3", "F4"]
+    EMPLOYMENT_CATEGORIES: List[str] = field(default_factory=lambda: ["EB-1", "EB-2", "EB-3", "EB-4", "EB-5"])
+    FAMILY_CATEGORIES: List[str] = field(default_factory=lambda: ["F1", "F2A", "F2B", "F3", "F4"])
     
     # Countries with special processing
-    SPECIAL_COUNTRIES: List[str] = ["China", "India", "Mexico", "Philippines"]
+    SPECIAL_COUNTRIES: List[str] = field(default_factory=lambda: ["China", "India", "Mexico", "Philippines"])
     
     # Database settings
     DATABASE_PATH: str = os.getenv("VISA_DB_PATH", "data/visa_bulletins.db")
