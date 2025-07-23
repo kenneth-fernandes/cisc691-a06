@@ -37,6 +37,32 @@ class Config:
         # Server Configuration
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "8000"))
+        
+        # Environment Mode
+        self.DOCKER_MODE = os.getenv("DOCKER_MODE", "False").lower() == "true"
+        
+        # Database Configuration
+        self.DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")
+        self.DATABASE_PATH = os.getenv("DATABASE_PATH", "data/visa_bulletins.db")
+        
+        # PostgreSQL Configuration
+        self.POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
+        self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+        self.POSTGRES_DB = os.getenv("POSTGRES_DB", "app_db")
+        self.POSTGRES_USER = os.getenv("POSTGRES_USER", "admin")
+        self.POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+        
+        # Redis Configuration
+        self.REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
+        self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
+        
+        # MongoDB Configuration
+        self.MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")
+        self.MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
+        self.MONGO_DB = os.getenv("MONGO_DB", "app_db")
+        self.MONGO_USER = os.getenv("MONGO_USER", "admin")
+        self.MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "password")
     
     def validate_config(self, provider: str = None) -> bool:
         """Validate that required configuration is present"""
