@@ -2,7 +2,7 @@
 Visa bulletin expertise and prompts for the AI agent
 """
 from typing import Dict
-from src.visa.models import VisaCategory, CountryCode, BulletinStatus
+from visa.models import VisaCategory, CountryCode, BulletinStatus
 
 # Knowledge base for visa bulletin understanding
 VISA_CATEGORIES_INFO = {

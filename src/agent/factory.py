@@ -1,8 +1,8 @@
 """
 Agent factory for creating different types of AI agents
 """
-from src.agent.core import AIAgent
-from src.utils.config import get_config
+from agent.core import AIAgent
+from utils.config import get_config
 from typing import Dict, Any
 
 # Agent type configurations
