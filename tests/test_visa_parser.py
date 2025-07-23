@@ -142,7 +142,7 @@ class TestBulletinDateExtractor:
         
         bulletin_date, month, year = BulletinDateExtractor.extract_bulletin_date("", url)
         
-        assert bulletin_date == date(2025, 7, 22)  # Using current test date
+        assert bulletin_date == date(2025, 7, 1)  # First day of the bulletin month
         assert month == 7
         assert year == 2025
     

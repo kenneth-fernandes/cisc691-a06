@@ -128,9 +128,25 @@ class BulletinDateExtractor:
         """Extract bulletin date, month, and year from content"""
         # Try URL-based extraction first
         if url:
-            date_match = re.search(r'(\d{4})-(\w+)', url)
+            # Try multiple URL patterns
+            url_patterns = [
+                r'for-(\w+)-(\d{4})',  # for-july-2025
+                r'(\w+)-(\d{4})',      # july-2025  
+                r'/(\d{4})/.*?-(\w+)-\d{4}',  # /2025/visa-bulletin-for-july-2025
+            ]
+            
+            for pattern in url_patterns:
+                date_match = re.search(pattern, url)
+                if date_match:
+                    if pattern == r'/(\d{4})/.*?-(\w+)-\d{4}':
+                        year_str, month_str = date_match.groups()
+                    else:
+                        month_str, year_str = date_match.groups()
+                    break
+            else:
+                date_match = None
+                
             if date_match:
-                year_str, month_str = date_match.groups()
                 try:
                     year = int(year_str)
                     month_map = {
