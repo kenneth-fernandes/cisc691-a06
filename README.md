@@ -28,11 +28,43 @@ A flexible AI agent implementation using LangChain framework that supports multi
 
 - 🏗️ Architecture:
   - 🏭 Factory pattern for agent creation
-  - 📚 Layered architecture
+  - 📚 Layered architecture with clean separation
   - 🔄 Provider-agnostic design
   - 🛠️ Configuration management
+  - 🗄️ Multi-database support (SQLite, PostgreSQL)
+  - 🐳 Docker containerization with health checks
 
 ## 🚀 Setup
+
+### 🐳 Docker Setup (Recommended)
+
+For a complete environment with PostgreSQL, Redis, and MongoDB:
+
+1. 📥 Clone the repository:
+```bash
+git clone [repository-url]
+cd cisc691-a06
+```
+
+2. 🐳 Start Docker services:
+```bash
+cd docker
+docker-compose up -d
+```
+
+This will start:
+- 🗄️ PostgreSQL database (port 5432)
+- 🔄 Redis cache (port 6379) 
+- 📊 MongoDB (port 27017)
+- 🌐 Streamlit web interface (port 8501)
+
+3. ⚙️ Configure environment:
+- The application will automatically use PostgreSQL in Docker mode
+- Environment variables are configured in docker-compose.yml
+
+### 🔧 Local Development Setup
+
+For local development with SQLite:
 
 1. 📥 Clone the repository:
 ```bash
@@ -65,6 +97,12 @@ pip install -r requirements.txt
 
 ## 🚀 Running the Application
 
+### 🐳 Docker Mode
+If using Docker, the application starts automatically:
+- Access the UI at `http://localhost:8501`
+- The application uses PostgreSQL database automatically
+
+### 🔧 Local Mode
 1. Start the Streamlit application:
 ```bash
 streamlit run src/main.py
@@ -122,8 +160,30 @@ python scripts/test_visa_agent.py # Visa bulletin expertise
 
 ## ⚙️ Configuration
 
-Set your preferred provider in `.env`:
+### 🗄️ Database Configuration
+
+The application supports multiple database backends:
+
+**Docker Mode (PostgreSQL)**:
+```env
+DOCKER_MODE=true
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=app_db
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=password
 ```
+
+**Local Mode (SQLite)**:
+```env
+DOCKER_MODE=false
+DATABASE_PATH=data/visa_bulletins.db
+```
+
+### 🤖 LLM Provider Configuration
+
+Set your preferred provider in `.env`:
+```env
 # Use Google's free tier
 LLM_PROVIDER=google
 GOOGLE_MODEL=gemini-1.5-flash
@@ -131,6 +191,16 @@ GOOGLE_MODEL=gemini-1.5-flash
 # Or use local Ollama
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=llama3.2
+
+# Or use OpenAI (requires API key)
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4o
+
+# Or use Anthropic (requires API key)
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your_api_key_here
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 ```
 
 ## 📊 Current Status
@@ -147,6 +217,12 @@ OLLAMA_MODEL=llama3.2
   - ✅ Movement analysis and predictions
   - ✅ Historical trend analysis
   - ✅ Expert system prompts and templates
+- ✅ **Multi-database architecture** (NEW)
+  - ✅ Abstract database interface
+  - ✅ SQLite implementation for local development
+  - ✅ PostgreSQL implementation for production
+  - ✅ Factory pattern for automatic database selection
+  - ✅ Docker containerization with health checks
 - 🚧 Visa data collection and parsing (In progress)
 - 🚧 ML prediction models (Coming soon)
 - 🚧 Interactive visa dashboard (Coming soon)
@@ -173,10 +249,56 @@ The AI agent now includes specialized expertise and analytical capabilities for 
 - Expert-level explanations and analysis
 
 ### 🛠️ Technical Implementation
+- **Database Layer**: Abstract interface supporting SQLite and PostgreSQL
+- **Repository Pattern**: Clean data access layer with validation
+- **Factory Pattern**: Automatic database selection based on environment
 - Machine learning models (Random Forest, Logistic Regression)
 - Official State Department data parsing
 - Real-time bulletin updates
 - Interactive visualizations with Plotly
+- Docker containerization with service orchestration
+
+## 🗄️ Database Architecture
+
+The application features a flexible, multi-database architecture designed for both development and production environments:
+
+### 🏗️ Architecture Components
+
+- **Abstract Interface**: `DatabaseInterface` defines standard CRUD operations
+- **SQLite Implementation**: Lightweight database for local development and testing
+- **PostgreSQL Implementation**: Production-ready database with advanced features
+- **Factory Pattern**: Automatic database selection based on `DOCKER_MODE` configuration
+- **Repository Layer**: Clean separation between business logic and data access
+
+### 🔧 Database Implementations
+
+**SQLite Database** (`src/database/sqlite.py`):
+- File-based storage with automatic directory creation
+- In-memory database support for testing
+- Persistent connection handling for memory databases
+- Full-text search capabilities
+
+**PostgreSQL Database** (`src/database/postgresql.py`):
+- Production-ready with connection pooling
+- ACID compliance and advanced query optimization
+- Docker integration with health checks
+- Scalable for high-volume data processing
+
+### 🧪 Testing Infrastructure
+
+- **Comprehensive Test Suite**: Unit tests for both database implementations
+- **In-Memory Testing**: Fast SQLite in-memory tests for CI/CD
+- **Integration Tests**: End-to-end testing with real database operations
+- **Mock Testing**: Isolated testing with dependency injection
+
+### 📊 Supported Operations
+
+All database implementations support:
+- Visa bulletin storage and retrieval
+- Category-specific historical data queries
+- Prediction result storage and analysis
+- Database statistics and health monitoring
+- Atomic transactions and data integrity
 
 ## 📝 Assignment Information
 
