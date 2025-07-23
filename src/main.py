@@ -2,8 +2,8 @@
 Main Streamlit application entry point
 """
 import streamlit as st
-from ui.components.sidebar import render_sidebar
-from ui.pages.chat import render_chat_page
+from src.ui.components.sidebar import render_sidebar
+from src.ui.pages.chat import render_chat_page
 
 def apply_custom_css():
     """Apply custom CSS styling"""
