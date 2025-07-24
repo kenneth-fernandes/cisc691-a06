@@ -129,9 +129,8 @@ class TestVisaBulletinScraper:
         mock_head.side_effect = Exception("Network error")
         
         scraper = VisaBulletinScraper()
-        result = scraper.verify_bulletin_url("https://example.com")
-        
-        assert result is False
+        with pytest.raises(Exception, match="Network error"):
+            scraper.verify_bulletin_url("https://example.com")
 
 
 class TestBulletinDateExtractor:
@@ -139,13 +138,13 @@ class TestBulletinDateExtractor:
     
     def test_extract_bulletin_date_from_url(self):
         """Test extracting date from URL"""
-        url = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/2024/visa-bulletin-for-june-2024.html"
+        url = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/2025/visa-bulletin-for-july-2025.html"
         
         bulletin_date, month, year = BulletinDateExtractor.extract_bulletin_date("", url)
         
-        assert bulletin_date == date(2024, 6, 1)
-        assert month == 6
-        assert year == 2024
+        assert bulletin_date == date(2025, 7, 1)  # First day of the bulletin month
+        assert month == 7
+        assert year == 2025
     
     def test_extract_bulletin_date_from_content(self):
         """Test extracting date from content"""

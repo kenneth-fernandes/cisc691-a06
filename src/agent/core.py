@@ -4,8 +4,8 @@ Core AI Agent implementation supporting multiple LLM providers
 import os
 from typing import List, Dict, Any, Optional, Union
 from datetime import date
-from ..visa.models import VisaCategory, CountryCode, VisaBulletin, CategoryData, PredictionResult
-from .visa_expertise import VISA_EXPERT_PROMPT, PROMPT_TEMPLATES, get_category_insight, get_country_insight
+from visa.models import VisaCategory, CountryCode, VisaBulletin, CategoryData, PredictionResult
+from agent.visa_expertise import VISA_EXPERT_PROMPT, PROMPT_TEMPLATES, get_category_insight, get_country_insight
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate

@@ -78,3 +78,5 @@ logs/
 
 # Python environment files
 .venv/
+
+data/
