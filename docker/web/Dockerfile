@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     iputils-ping \
     netcat-openbsd \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
