@@ -223,8 +223,14 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
   - ✅ PostgreSQL implementation for production
   - ✅ Factory pattern for automatic database selection
   - ✅ Docker containerization with health checks
+- ✅ **Machine Learning Prediction Models** (NEW)
+  - ✅ Random Forest regression for date advancement predictions
+  - ✅ Logistic Regression for trend classification
+  - ✅ Trend analysis with seasonal factors and volatility scoring
+  - ✅ Country-specific prediction logic (India, China, etc.)
+  - ✅ Model training, evaluation, and persistence utilities
+  - ✅ Comprehensive test suite (23 tests) with 100% pass rate
 - 🚧 Visa data collection and parsing (In progress)
-- 🚧 ML prediction models (Coming soon)
 - 🚧 Interactive visa dashboard (Coming soon)
 - 🚧 Memory persistence (Coming soon)
 - 🚧 Enhanced error handling (Coming soon)
@@ -257,6 +263,128 @@ The AI agent now includes specialized expertise and analytical capabilities for 
 - Real-time bulletin updates
 - Interactive visualizations with Plotly
 - Docker containerization with service orchestration
+
+## 🤖 Machine Learning Prediction System
+
+The application now includes advanced machine learning capabilities for visa bulletin forecasting, implemented in `src/visa/predictor.py`:
+
+### 🎯 ML Models
+
+**Random Forest Predictor** (`RandomForestPredictor`):
+- **Purpose**: Regression-based date advancement predictions
+- **Features**: Feature importance analysis, confidence scoring
+- **Best for**: Precise date forecasting with uncertainty quantification
+
+**Logistic Regression Predictor** (`LogisticRegressionPredictor`):
+- **Purpose**: Hybrid classification + regression approach
+- **Features**: Trend classification (advancing/stable/retrogressing) + magnitude prediction
+- **Best for**: Trend analysis and interpretable predictions
+
+### 📊 Feature Engineering
+
+The system automatically extracts rich features from historical visa data:
+
+- **Temporal Features**: Fiscal year, month, days since epoch
+- **Trend Features**: Date advancement patterns, volatility scores, trend slopes
+- **Seasonal Features**: Month-specific advancement factors
+- **Country Features**: Country-specific processing factors (India: 0.3, China: 0.5, etc.)
+- **Category Features**: Employment vs family-based encoding
+
+### 🔬 Trend Analysis
+
+**TrendAnalyzer Class**:
+- Historical pattern recognition and seasonal factor calculation
+- Volatility scoring for prediction uncertainty
+- Trend direction classification (advancing/retrogressing/stable)
+- Monthly advancement statistics
+
+### 💻 Usage Examples
+
+```python
+from visa.predictor import create_predictor, TrendAnalyzer
+from visa.database import VisaDatabase
+from visa.models import VisaCategory, CountryCode
+
+# Initialize system
+db = VisaDatabase()
+predictor = create_predictor('randomforest', db)
+
+# Train model with historical data
+metrics = predictor.train()
+print(f"Model accuracy - MAE: {metrics['test_mae']:.2f} days")
+
+# Make predictions
+prediction = predictor.predict(
+    category=VisaCategory.EB2,
+    country=CountryCode.INDIA,
+    target_month=8,
+    target_year=2024
+)
+
+print(f"Predicted date: {prediction.predicted_date}")
+print(f"Confidence: {prediction.confidence_score:.1%}")
+print(f"Trend: {prediction.prediction_type}")
+
+# Analyze historical trends
+analyzer = TrendAnalyzer(db)
+trend = analyzer.analyze_category_trend(VisaCategory.EB2, CountryCode.INDIA)
+print(f"Average monthly advancement: {trend.average_monthly_advancement:.1f} days")
+print(f"Trend direction: {trend.trend_direction}")
+```
+
+### 🛠️ Model Management
+
+**Model Persistence**:
+```python
+# Save trained model
+predictor.save_model('models/eb2_india_rf.pkl')
+
+# Load pre-trained model
+new_predictor = RandomForestPredictor(db)
+new_predictor.load_model('models/eb2_india_rf.pkl')
+```
+
+**Model Evaluation**:
+```python
+from visa.predictor import ModelEvaluator
+
+evaluator = ModelEvaluator(db)
+models = [
+    create_predictor('randomforest', db),
+    create_predictor('logisticregression', db)
+]
+
+# Compare model performance
+comparison = evaluator.compare_models(models)
+recommendations = evaluator.get_model_recommendations()
+```
+
+### 🧪 Testing Infrastructure
+
+**Comprehensive Test Suite** (`tests/test_visa_predictor.py`):
+- ✅ **23 tests** covering all ML components
+- ✅ **100% pass rate** with proper mocking
+- ✅ **Feature extraction** testing with various data scenarios
+- ✅ **Model training** validation with synthetic data
+- ✅ **Prediction logic** testing including edge cases
+- ✅ **Model persistence** save/load functionality
+- ✅ **Integration tests** for end-to-end workflows
+
+**Test Categories**:
+- `TrendAnalyzer` tests: Historical analysis and seasonal factors
+- `RandomForestPredictor` tests: Training, prediction, persistence
+- `LogisticRegressionPredictor` tests: Classification + regression hybrid
+- `ModelEvaluator` tests: Performance comparison utilities
+- Factory function tests: Model creation and validation
+
+### 🎨 Architecture Design
+
+**Modular Design Principles**:
+- **Pluggable Models**: Easy addition of new ML algorithms
+- **Feature Engineering**: Automated extraction from historical data
+- **Country-Specific Logic**: Tailored predictions per country/category
+- **Confidence Scoring**: Reliability metrics for all predictions
+- **Model Versioning**: Track model evolution and performance
 
 ## 🗄️ Database Architecture
 

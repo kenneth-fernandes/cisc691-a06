@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import date
 from visa.models import VisaCategory, CountryCode, VisaBulletin, CategoryData, PredictionResult
 from agent.visa_expertise import VISA_EXPERT_PROMPT, PROMPT_TEMPLATES, get_category_insight, get_country_insight
+from utils.config import get_config
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -40,6 +41,9 @@ class AIAgent:
         self.provider = provider
         self.model_name = model_name
         self.temperature = temperature
+        
+        # Load configuration
+        self.config = get_config()
         
         # Initialize LLM based on provider
         self.llm = self._initialize_llm()
@@ -93,7 +97,8 @@ class AIAgent:
                 raise ImportError("langchain_community not installed. Run: pip install langchain-community")
             return ChatOllama(
                 model=self.model_name,
-                temperature=self.temperature
+                temperature=self.temperature,
+                base_url=self.config.OLLAMA_BASE_URL
             )
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
