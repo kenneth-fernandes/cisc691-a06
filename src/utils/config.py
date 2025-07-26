@@ -27,6 +27,7 @@ class Config:
         
         # Ollama Configuration (LOCAL - FREE)
         self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")  # Local model
+        self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")  # Default for Docker
         
         # Application Configuration
         self.APP_NAME = os.getenv("APP_NAME", "AI Agent")
