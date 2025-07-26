@@ -235,11 +235,26 @@ class TestBulletinTableParser:
             ("Second Preference", VisaCategory.EB2),
             ("F1", VisaCategory.F1),
             ("F2A", VisaCategory.F2A),
+            # Test new Employment-Based category parsing (State Department format)
+            ("1ST", VisaCategory.EB1),
+            ("2ND", VisaCategory.EB2),
+            ("3RD", VisaCategory.EB3),
+            ("4TH", VisaCategory.EB4),
+            ("5TH", VisaCategory.EB5),
+            ("FIRST", VisaCategory.EB1),
+            ("SECOND", VisaCategory.EB2),
+            ("THIRD", VisaCategory.EB3),
+            ("FOURTH", VisaCategory.EB4),
+            ("FIFTH", VisaCategory.EB5),
+            ("OTHER WORKERS", VisaCategory.EB3),
+            ("CERTAIN RELIGIOUS WORKERS", VisaCategory.EB4),
+            ("RELIGIOUS WORKERS", VisaCategory.EB4),
+            ("UNRESERVED", VisaCategory.EB5),
         ]
         
         for category_text, expected in test_cases:
             result = parser._parse_category(category_text)
-            assert result == expected
+            assert result == expected, f"Failed to parse '{category_text}' as {expected}"
         
         # Test invalid category
         result = parser._parse_category("Invalid Category")
@@ -260,7 +275,27 @@ class TestBulletinTableParser:
         result = parser._parse_date_cell("U")
         assert result["status"] == BulletinStatus.UNAVAILABLE
         
-        # Test actual dates
+        # Test State Department date formats (enhanced parsing)
+        result = parser._parse_date_cell("15JAN23")
+        assert result["final_action_date"] == date(2023, 1, 15)
+        assert result["status"] == BulletinStatus.DATE_SPECIFIED
+        
+        result = parser._parse_date_cell("22APR24")
+        assert result["final_action_date"] == date(2024, 4, 22)
+        assert result["status"] == BulletinStatus.DATE_SPECIFIED
+        
+        result = parser._parse_date_cell("01DEC22")
+        assert result is not None, "Expected result for 01DEC22 but got None"
+        assert "final_action_date" in result, f"Missing final_action_date in result: {result}"
+        assert result["final_action_date"] == date(2022, 12, 1)
+        assert result["status"] == BulletinStatus.DATE_SPECIFIED
+        
+        # Test 4-digit year format
+        result = parser._parse_date_cell("15JAN2023")
+        assert result["final_action_date"] == date(2023, 1, 15)
+        assert result["status"] == BulletinStatus.DATE_SPECIFIED
+        
+        # Test standard date formats
         result = parser._parse_date_cell("01/15/2023")
         assert result["final_action_date"] == date(2023, 1, 15)
         assert result["status"] == BulletinStatus.DATE_SPECIFIED
@@ -268,8 +303,21 @@ class TestBulletinTableParser:
         result = parser._parse_date_cell("2023-06-15")
         assert result["final_action_date"] == date(2023, 6, 15)
         
+        # Test edge cases for 2-digit year conversion
+        result = parser._parse_date_cell("15JAN49")  # Should be 2049
+        assert result["final_action_date"] == date(2049, 1, 15)
+        
+        result = parser._parse_date_cell("15JAN50")  # Should be 1950
+        assert result["final_action_date"] == date(1950, 1, 15)
+        
         # Test invalid date
         result = parser._parse_date_cell("invalid date")
+        assert result is None
+        
+        result = parser._parse_date_cell("32JAN23")  # Invalid day
+        assert result is None
+        
+        result = parser._parse_date_cell("15XXX23")  # Invalid month
         assert result is None
 
 

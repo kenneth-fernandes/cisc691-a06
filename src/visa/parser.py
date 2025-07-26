@@ -344,9 +344,9 @@ class BulletinTableParser:
         """Parse date from table cell"""
         date_text = date_text.strip().upper()
         
-        if 'C' in date_text or 'CURRENT' in date_text:
+        if date_text == 'C' or date_text == 'CURRENT':
             return {'status': BulletinStatus.CURRENT}
-        elif 'U' in date_text or 'UNAVAILABLE' in date_text:
+        elif date_text == 'U' or date_text == 'UNAVAILABLE':
             return {'status': BulletinStatus.UNAVAILABLE}
         
         # Month name mappings for State Department format

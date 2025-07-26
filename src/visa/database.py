@@ -35,7 +35,9 @@ class VisaDatabase:
             self._ensure_directory_exists()
             print(f"VisaDatabase: Using SQLite - {self.db_path}")
         
+        print("VisaDatabase: About to create tables...")
         self._create_tables()
+        print("VisaDatabase: Tables created successfully")
     
     def _ensure_directory_exists(self):
         """Ensure the database directory exists"""
@@ -67,149 +69,159 @@ class VisaDatabase:
     
     def _create_tables(self):
         """Create database tables if they don't exist"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            if self.use_postgres:
-                # PostgreSQL table creation
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS visa_bulletins (
-                        id SERIAL PRIMARY KEY,
-                        bulletin_date DATE NOT NULL,
-                        fiscal_year INTEGER NOT NULL,
-                        month INTEGER NOT NULL,
-                        year INTEGER NOT NULL,
-                        source_url TEXT,
-                        created_at TIMESTAMP NOT NULL,
-                        updated_at TIMESTAMP NOT NULL,
-                        UNIQUE(fiscal_year, month, year)
-                    )
-                """)
-            else:
-                # SQLite table creation
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS visa_bulletins (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        bulletin_date TEXT NOT NULL,
-                        fiscal_year INTEGER NOT NULL,
-                        month INTEGER NOT NULL,
-                        year INTEGER NOT NULL,
-                        source_url TEXT,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        UNIQUE(fiscal_year, month, year)
-                    )
-                """)
-            
-            if self.use_postgres:
-                # PostgreSQL category data table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS category_data (
-                        id SERIAL PRIMARY KEY,
-                        bulletin_id INTEGER NOT NULL,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        final_action_date DATE,
-                        filing_date DATE,
-                        status TEXT NOT NULL,
-                        notes TEXT,
-                        FOREIGN KEY (bulletin_id) REFERENCES visa_bulletins (id) ON DELETE CASCADE,
-                        UNIQUE(bulletin_id, category, country)
-                    )
-                """)
-            else:
-                # SQLite category data table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS category_data (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        bulletin_id INTEGER NOT NULL,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        final_action_date TEXT,
-                        filing_date TEXT,
-                        status TEXT NOT NULL,
-                        notes TEXT,
-                        FOREIGN KEY (bulletin_id) REFERENCES visa_bulletins (id),
-                        UNIQUE(bulletin_id, category, country)
-                    )
-                """)
-            
-            if self.use_postgres:
-                # PostgreSQL predictions table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS predictions (
-                        id SERIAL PRIMARY KEY,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        predicted_date DATE,
-                        confidence_score REAL NOT NULL,
-                        prediction_type TEXT NOT NULL,
-                        target_month INTEGER NOT NULL,
-                        target_year INTEGER NOT NULL,
-                        created_at TIMESTAMP NOT NULL,
-                        model_version TEXT NOT NULL
-                    )
-                """)
+        print(f"_create_tables: Starting table creation, use_postgres={self.use_postgres}")
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                print("_create_tables: Got database connection and cursor")
                 
-                # PostgreSQL trend analysis table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS trend_analysis (
-                        id SERIAL PRIMARY KEY,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        start_date DATE NOT NULL,
-                        end_date DATE NOT NULL,
-                        total_advancement_days INTEGER NOT NULL,
-                        average_monthly_advancement REAL NOT NULL,
-                        volatility_score REAL NOT NULL,
-                        trend_direction TEXT NOT NULL,
-                        analysis_date TIMESTAMP NOT NULL
-                    )
-                """)
-            else:
-                # SQLite predictions table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS predictions (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        predicted_date TEXT,
-                        confidence_score REAL NOT NULL,
-                        prediction_type TEXT NOT NULL,
-                        target_month INTEGER NOT NULL,
-                        target_year INTEGER NOT NULL,
-                        created_at TEXT NOT NULL,
-                        model_version TEXT NOT NULL
-                    )
-                """)
+                if self.use_postgres:
+                    # PostgreSQL table creation
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS visa_bulletins (
+                            id SERIAL PRIMARY KEY,
+                            bulletin_date DATE NOT NULL,
+                            fiscal_year INTEGER NOT NULL,
+                            month INTEGER NOT NULL,
+                            year INTEGER NOT NULL,
+                            source_url TEXT,
+                            created_at TIMESTAMP NOT NULL,
+                            updated_at TIMESTAMP NOT NULL,
+                            UNIQUE(fiscal_year, month, year)
+                        )
+                    """)
+                else:
+                    # SQLite table creation
+                    print("_create_tables: Creating SQLite visa_bulletins table")
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS visa_bulletins (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            bulletin_date TEXT NOT NULL,
+                            fiscal_year INTEGER NOT NULL,
+                            month INTEGER NOT NULL,
+                            year INTEGER NOT NULL,
+                            source_url TEXT,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            UNIQUE(fiscal_year, month, year)
+                        )
+                    """)
+                    print("_create_tables: SQLite visa_bulletins table created")
                 
-                # SQLite trend analysis table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS trend_analysis (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        category TEXT NOT NULL,
-                        country TEXT NOT NULL,
-                        start_date TEXT NOT NULL,
-                        end_date TEXT NOT NULL,
-                        total_advancement_days INTEGER NOT NULL,
-                        average_monthly_advancement REAL NOT NULL,
-                        volatility_score REAL NOT NULL,
-                        trend_direction TEXT NOT NULL,
-                        analysis_date TEXT NOT NULL
-                    )
-                """)
-            
-            # Create indexes for better query performance
-            if self.use_postgres:
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_bulletins_date ON visa_bulletins(fiscal_year, month, year)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_data_lookup ON category_data(category, country)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_lookup ON predictions(category, country, target_year, target_month)")
-            else:
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_bulletins_date ON visa_bulletins(fiscal_year, month, year)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_data_lookup ON category_data(category, country)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_lookup ON predictions(category, country, target_year, target_month)")
-            
-            conn.commit()
+                if self.use_postgres:
+                    # PostgreSQL category data table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS category_data (
+                            id SERIAL PRIMARY KEY,
+                            bulletin_id INTEGER NOT NULL,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            final_action_date DATE,
+                            filing_date DATE,
+                            status TEXT NOT NULL,
+                            notes TEXT,
+                            FOREIGN KEY (bulletin_id) REFERENCES visa_bulletins (id) ON DELETE CASCADE,
+                            UNIQUE(bulletin_id, category, country)
+                        )
+                    """)
+                else:
+                    # SQLite category data table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS category_data (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            bulletin_id INTEGER NOT NULL,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            final_action_date TEXT,
+                            filing_date TEXT,
+                            status TEXT NOT NULL,
+                            notes TEXT,
+                            FOREIGN KEY (bulletin_id) REFERENCES visa_bulletins (id),
+                            UNIQUE(bulletin_id, category, country)
+                        )
+                    """)
+                
+                if self.use_postgres:
+                    # PostgreSQL predictions table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS predictions (
+                            id SERIAL PRIMARY KEY,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            predicted_date DATE,
+                            confidence_score REAL NOT NULL,
+                            prediction_type TEXT NOT NULL,
+                            target_month INTEGER NOT NULL,
+                            target_year INTEGER NOT NULL,
+                            created_at TIMESTAMP NOT NULL,
+                            model_version TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # PostgreSQL trend analysis table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS trend_analysis (
+                            id SERIAL PRIMARY KEY,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            start_date DATE NOT NULL,
+                            end_date DATE NOT NULL,
+                            total_advancement_days INTEGER NOT NULL,
+                            average_monthly_advancement REAL NOT NULL,
+                            volatility_score REAL NOT NULL,
+                            trend_direction TEXT NOT NULL,
+                            analysis_date TIMESTAMP NOT NULL
+                        )
+                    """)
+                else:
+                    # SQLite predictions table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS predictions (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            predicted_date TEXT,
+                            confidence_score REAL NOT NULL,
+                            prediction_type TEXT NOT NULL,
+                            target_month INTEGER NOT NULL,
+                            target_year INTEGER NOT NULL,
+                            created_at TEXT NOT NULL,
+                            model_version TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # SQLite trend analysis table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS trend_analysis (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            category TEXT NOT NULL,
+                            country TEXT NOT NULL,
+                            start_date TEXT NOT NULL,
+                            end_date TEXT NOT NULL,
+                            total_advancement_days INTEGER NOT NULL,
+                            average_monthly_advancement REAL NOT NULL,
+                            volatility_score REAL NOT NULL,
+                            trend_direction TEXT NOT NULL,
+                            analysis_date TEXT NOT NULL
+                        )
+                    """)
+                
+                # Create indexes for better query performance
+                if self.use_postgres:
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bulletins_date ON visa_bulletins(fiscal_year, month, year)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_data_lookup ON category_data(category, country)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_lookup ON predictions(category, country, target_year, target_month)")
+                else:
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bulletins_date ON visa_bulletins(fiscal_year, month, year)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_category_data_lookup ON category_data(category, country)")
+                    cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_lookup ON predictions(category, country, target_year, target_month)")
+                    
+                conn.commit()
+        except Exception as e:
+            print(f"Error creating tables: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def save_bulletin(self, bulletin: VisaBulletin) -> int:
         """Save a visa bulletin and return its ID"""
