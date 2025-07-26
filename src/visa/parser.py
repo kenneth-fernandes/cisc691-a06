@@ -222,8 +222,20 @@ class BulletinTableParser:
     def _is_visa_table(self, table: Tag) -> bool:
         """Check if table contains visa bulletin data"""
         table_text = table.get_text().lower()
-        return any(cat.lower() in table_text for cat in 
-                  ['eb-1', 'eb-2', 'eb-3', 'f1', 'f2a', 'f2b', 'f3', 'f4'])
+        
+        # Employment-Based patterns (ordinal numbers and subcategories)
+        eb_patterns = [
+            '1st', '2nd', '3rd', '4th', '5th',
+            'other workers', 'certain religious workers',
+            'unreserved', 'eb-1', 'eb-2', 'eb-3', 'eb-4', 'eb-5'
+        ]
+        
+        # Family-Based patterns
+        fb_patterns = ['f1', 'f2a', 'f2b', 'f3', 'f4']
+        
+        # Check for any visa category patterns
+        all_patterns = eb_patterns + fb_patterns
+        return any(pattern in table_text for pattern in all_patterns)
     
     def _parse_table(self, table: Tag) -> List[CategoryData]:
         """Parse individual table for category data"""
@@ -291,22 +303,37 @@ class BulletinTableParser:
         category_text = category_text.upper().strip()
         
         try:
-            # Direct match
+            # Direct match first
             for cat in VisaCategory:
                 if cat.value.upper() in category_text:
                     return cat
-                    
-            # Pattern matching
-            if 'EB-1' in category_text or 'FIRST' in category_text:
+            
+            # Employment-Based category patterns (State Department format)
+            if '1ST' in category_text or 'EB-1' in category_text or 'FIRST' in category_text:
                 return VisaCategory.EB1
-            elif 'EB-2' in category_text or 'SECOND' in category_text:
+            elif '2ND' in category_text or 'EB-2' in category_text or 'SECOND' in category_text:
                 return VisaCategory.EB2
-            elif 'EB-3' in category_text or 'THIRD' in category_text:
+            elif ('3RD' in category_text or 'EB-3' in category_text or 'THIRD' in category_text or 
+                  'OTHER WORKERS' in category_text):
                 return VisaCategory.EB3
-            elif 'EB-4' in category_text or 'FOURTH' in category_text:
+            elif ('4TH' in category_text or 'EB-4' in category_text or 'FOURTH' in category_text or 
+                  'CERTAIN RELIGIOUS WORKERS' in category_text or 'RELIGIOUS WORKERS' in category_text):
                 return VisaCategory.EB4
-            elif 'EB-5' in category_text or 'FIFTH' in category_text:
+            elif ('5TH' in category_text or 'EB-5' in category_text or 'FIFTH' in category_text or 
+                  'UNRESERVED' in category_text):
                 return VisaCategory.EB5
+            
+            # Family-Based category patterns (existing logic)
+            elif 'F1' in category_text:
+                return VisaCategory.F1
+            elif 'F2A' in category_text:
+                return VisaCategory.F2A
+            elif 'F2B' in category_text:
+                return VisaCategory.F2B
+            elif 'F3' in category_text:
+                return VisaCategory.F3
+            elif 'F4' in category_text:
+                return VisaCategory.F4
                 
         except Exception as e:
             logger.warning(f"Failed to parse category '{category_text}': {e}")
@@ -322,7 +349,36 @@ class BulletinTableParser:
         elif 'U' in date_text or 'UNAVAILABLE' in date_text:
             return {'status': BulletinStatus.UNAVAILABLE}
         
-        # Try to parse actual dates
+        # Month name mappings for State Department format
+        month_names = {
+            'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
+            'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
+        }
+        
+        # Try State Department format first (most common): 15JAN23, 22APR24
+        state_dept_pattern = r'(\d{1,2})([A-Z]{3})(\d{2,4})'
+        match = re.search(state_dept_pattern, date_text)
+        if match:
+            try:
+                day, month_str, year_str = match.groups()
+                day = int(day)
+                month = month_names.get(month_str)
+                
+                if month:
+                    # Handle 2-digit vs 4-digit years
+                    year = int(year_str)
+                    if year < 100:  # 2-digit year
+                        year = 2000 + year if year < 50 else 1900 + year
+                    
+                    parsed_date = date(year, month, day)
+                    return {
+                        'final_action_date': parsed_date,
+                        'status': BulletinStatus.DATE_SPECIFIED
+                    }
+            except (ValueError, TypeError):
+                pass
+        
+        # Try numeric date patterns
         date_patterns = [
             r'(\d{1,2})/(\d{1,2})/(\d{4})',  # MM/DD/YYYY
             r'(\d{1,2})-(\d{1,2})-(\d{4})',  # MM-DD-YYYY
