@@ -1,4 +1,26 @@
 services:
+  # FastAPI Backend
+  api:
+    build:
+      context: ../
+      dockerfile: docker/web/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      DOCKER_MODE: true
+    volumes:
+      - ../:/app
+    command: ["python", "scripts/start_api.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Streamlit Frontend  
   web:
     build:
       context: ../
@@ -6,11 +28,15 @@ services:
     ports:
       - "8501:8501"
     depends_on:
+      - api
       - db
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      API_BASE_URL: http://api:8000
+      DOCKER_MODE: true
     volumes:
       - ../:/app
+    command: ["streamlit", "run", "src/main.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s

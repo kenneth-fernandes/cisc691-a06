@@ -98,21 +98,42 @@ pip install -r requirements.txt
 
 ## 🚀 Running the Application
 
-### 🐳 Docker Mode
-If using Docker, the application starts automatically:
-- Access the UI at `http://localhost:8501`
-- The application uses PostgreSQL database automatically
+### 🐳 Docker Mode (Recommended)
+**Automatic startup with all services:**
+```bash
+# Option 1: Use helper script
+python scripts/start_docker.py
+
+# Option 2: Manual Docker compose
+cd docker
+docker-compose up --build
+```
+
+**Services available:**
+- 🌐 **Frontend**: http://localhost:8501
+- 🔌 **API**: http://localhost:8000
+- 📖 **API Docs**: http://localhost:8000/docs
+- 🗄️ **Database**: PostgreSQL (auto-configured)
 
 ### 🔧 Local Mode
-1. Start the Streamlit application:
+**For development with SQLite:**
 ```bash
+# Option 1: Use helper script (starts both API and frontend)
+python scripts/start_local.py
+
+# Option 2: Manual startup
+# Terminal 1: Start API
+python scripts/start_api.py
+
+# Terminal 2: Start Frontend  
 streamlit run src/main.py
 ```
 
-2. Access the UI:
-- Open your browser to `http://localhost:8501`
-- Use the sidebar to select your preferred AI provider
-- Start chatting with the AI agent
+**Services available:**
+- 🌐 **Frontend**: http://localhost:8501
+- 🔌 **API**: http://localhost:8000
+- 📖 **API Docs**: http://localhost:8000/docs
+- 🗄️ **Database**: SQLite (auto-configured)
 
 Features available:
 - 🎨 Dark theme interface

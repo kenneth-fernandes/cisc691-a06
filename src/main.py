@@ -4,6 +4,7 @@ Main Streamlit application entry point
 import streamlit as st
 from ui.components.sidebar import render_sidebar
 from ui.pages.chat import render_chat_page
+from ui.pages.analytics import render_analytics_page
 
 def apply_custom_css():
     """Apply custom CSS styling"""
@@ -92,8 +93,18 @@ def main():
         # Render sidebar
         render_sidebar()
         
-        # Render main chat interface
-        render_chat_page()
+        # Page navigation
+        page = st.selectbox(
+            "Choose a page:",
+            ["🤖 Agent Chat", "📊 Visa Analytics"],
+            label_visibility="collapsed"
+        )
+        
+        # Render selected page
+        if page == "🤖 Agent Chat":
+            render_chat_page()
+        elif page == "📊 Visa Analytics":
+            render_analytics_page()
 
 if __name__ == "__main__":
     main()

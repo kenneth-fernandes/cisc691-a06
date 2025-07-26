@@ -3,19 +3,21 @@ Chat page implementation
 """
 import streamlit as st
 import time
-from agent.factory import create_agent
+import uuid
+from ui.utils.api_client import get_api_client
 
 def init_session_state():
     """Initialize session state variables"""
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "agent" not in st.session_state:
-        if "current_provider" in st.session_state:
-            st.session_state.agent = create_agent("default", provider=st.session_state.current_provider)
-        else:
-            st.session_state.agent = create_agent("default")
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
     if "processing" not in st.session_state:
         st.session_state.processing = False
+    if "api_client" not in st.session_state:
+        st.session_state.api_client = get_api_client()
+    if "current_provider" not in st.session_state:
+        st.session_state.current_provider = "google"  # Default provider
 
 def display_chat_message(role, content, time_taken=None):
     """Display a chat message with optional timing"""
@@ -64,8 +66,28 @@ def render_chat_page():
         with processing_container:
             with st.spinner("AI is thinking..."):
                 start_time = time.time()
-                response = st.session_state.agent.chat(prompt)
+                
+                # Create agent config
+                agent_config = {
+                    "agent_type": "default",
+                    "provider": st.session_state.current_provider,
+                    "mode": "general"
+                }
+                
+                # Call API
+                api_response = st.session_state.api_client.chat_with_agent(
+                    message=prompt,
+                    session_id=st.session_state.session_id,
+                    config=agent_config
+                )
+                
                 time_taken = time.time() - start_time
+                
+                # Handle API response
+                if "error" in api_response:
+                    response = f"Sorry, I encountered an error: {api_response['error']}"
+                else:
+                    response = api_response.get("response", "No response received")
         
         # Add AI response to state
         st.session_state.messages.append({

@@ -10,6 +10,9 @@ class Config:
     
     def __init__(self):
         """Initialize config after loading environment variables"""
+        # Environment Mode (must be first)
+        self.DOCKER_MODE = os.getenv("DOCKER_MODE", "False").lower() == "true"
+        
         # LLM Provider Configuration
         self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().split('#')[0].strip()
         
@@ -27,7 +30,10 @@ class Config:
         
         # Ollama Configuration (LOCAL - FREE)
         self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")  # Local model
-        self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")  # Default for Docker
+        if self.DOCKER_MODE:
+            self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")  # For Docker
+        else:
+            self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")  # For local mode
         
         # Application Configuration
         self.APP_NAME = os.getenv("APP_NAME", "AI Agent")
@@ -39,8 +45,11 @@ class Config:
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "8000"))
         
-        # Environment Mode
-        self.DOCKER_MODE = os.getenv("DOCKER_MODE", "False").lower() == "true"
+        # API Configuration
+        if self.DOCKER_MODE:
+            self.API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8000")
+        else:
+            self.API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
         
         # Database Configuration
         self.DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")
