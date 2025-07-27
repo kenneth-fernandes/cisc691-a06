@@ -8,13 +8,13 @@ import sys
 from pathlib import Path
 
 def main():
-    """Start Docker compose services"""
-    print("🐳 Starting application in DOCKER mode...")
+    """Start containerized application"""
+    print("🚀 Starting Visa Bulletin AI application...")
     print("📊 Database: PostgreSQL")
-    print("🌐 API: http://localhost:8000")
+    print("🔗 API: http://localhost:8000")
     print("💻 Frontend: http://localhost:8501")
     print("📖 API Docs: http://localhost:8000/docs")
-    print("-" * 50)
+    print("=" * 50)
     
     try:
         # Change to docker directory (go up from scripts/ to project root, then to docker/)

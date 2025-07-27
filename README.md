@@ -1,8 +1,8 @@
-# 🤖 AI Agent Project
+# 🤖 Visa Bulletin AI Agent
 
 ![CI](https://github.com/kenneth-fernandes/cisc691-a06/actions/workflows/ci.yml/badge.svg)
 
-A flexible AI agent implementation using LangChain framework that supports multiple LLM providers and can run with both cloud and local models.
+Containerized AI agent with REST API backend for US visa bulletin analysis and multi-provider LLM chat.
 
 ## ✨ Features
 
@@ -32,115 +32,81 @@ A flexible AI agent implementation using LangChain framework that supports multi
   - 📚 Layered architecture with clean separation
   - 🔄 Provider-agnostic design
   - 🛠️ Configuration management
-  - 🗄️ Multi-database support (SQLite, PostgreSQL)
-  - 🐳 Docker containerization with health checks
+  - 🗄️ PostgreSQL database with health checks
+  - 🐳 Full Docker containerization
 
-## 🚀 Setup
+## 🚀 Quick Start
 
-### 🐳 Docker Setup (Recommended)
-
-For a complete environment with PostgreSQL, Redis, and MongoDB:
-
-1. 📥 Clone the repository:
+### 1. 📥 Clone and Setup
 ```bash
-git clone [repository-url]
+git clone <repository-url>
 cd cisc691-a06
+cp .env.example .env
 ```
 
-2. 🐳 Start Docker services:
+### 2. 🔑 Add API Keys to `.env`
 ```bash
-cd docker
-docker-compose up -d
+# For Google Gemini (Free tier - recommended)
+GOOGLE_API_KEY=your_google_api_key_here
+
+# For OpenAI (if you have one)
+OPENAI_API_KEY=your_openai_key_here
+
+# For Anthropic (if you have one)  
+ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
 
-This will start:
-- 🗄️ PostgreSQL database (port 5432)
-- 🔄 Redis cache (port 6379) 
-- 📊 MongoDB (port 27017)
-- 🌐 Streamlit web interface (port 8501)
-
-3. ⚙️ Configure environment:
-- The application will automatically use PostgreSQL in Docker mode
-- Environment variables are configured in docker-compose.yml
-
-### 🔧 Local Development Setup
-
-For local development with SQLite:
-
-1. 📥 Clone the repository:
+### 3. 🚀 Start Application
 ```bash
-git clone [repository-url]
-cd cisc691-a06
+# Option 1: Using start script
+python scripts/start.py
+
+# Option 2: Direct docker-compose
+cd docker && docker-compose up --build
 ```
 
-2. 🌍 Create and activate virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+### 4. 🌐 Access Services
+- **Frontend**: http://localhost:8501
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
 
-3. 📦 Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+## 🐳 Docker Services
 
-4. ⚙️ Configure environment:
-- Copy `.env.example` to `.env`
-- Add your API keys (if using cloud providers)
-- For local setup, install Ollama:
-  ```bash
-  # Install Ollama
-  curl -fsSL https://ollama.com/install.sh | sh
-  
-  # Pull Llama model
-  ollama pull llama3.2
-  ```
+The application runs these containerized services:
 
-## 🚀 Running the Application
+- **🗄️ PostgreSQL Database** - Main data storage (port 5432)
+- **🔄 Redis** - Caching and session storage (port 6379)
+- **📊 MongoDB** - Document storage (port 27017)
+- **⚡ FastAPI Backend** - REST API server (port 8000)
+- **💻 Streamlit Frontend** - Web UI (port 8501)
 
-### 🐳 Docker Mode (Recommended)
-**Automatic startup with all services:**
-```bash
-# Option 1: Use helper script
-python scripts/start_docker.py
+### 🔧 Configuration
+All configuration is handled through environment variables in `.env`:
 
-# Option 2: Manual Docker compose
-cd docker
-docker-compose up --build
-```
+#### 🤖 LLM Providers
+- **🌐 Google Gemini** (default, free tier)
+- **🔷 OpenAI GPT** (paid)
+- **🟣 Anthropic Claude** (paid)
+- **💻 Ollama** (local models via Docker)
 
-**Services available:**
-- 🌐 **Frontend**: http://localhost:8501
-- 🔌 **API**: http://localhost:8000
-- 📖 **API Docs**: http://localhost:8000/docs
-- 🗄️ **Database**: PostgreSQL (auto-configured)
+#### 🗄️ Database
+- **PostgreSQL only** (no SQLite)
+- Automatic schema creation
+- Persistent data volumes
 
-### 🔧 Local Mode
-**For development with SQLite:**
-```bash
-# Option 1: Use helper script (starts both API and frontend)
-python scripts/start_local.py
+### Configuration
+All configuration is handled through environment variables in `.env`:
 
-# Option 2: Manual startup
-# Terminal 1: Start API
-python scripts/start_api.py
+#### LLM Providers
+- **Google Gemini** (default, free tier)
+- **OpenAI GPT** (paid)
+- **Anthropic Claude** (paid)
+- **Ollama** (local models via Docker)
 
-# Terminal 2: Start Frontend  
-streamlit run src/main.py
-```
-
-**Services available:**
-- 🌐 **Frontend**: http://localhost:8501
-- 🔌 **API**: http://localhost:8000
-- 📖 **API Docs**: http://localhost:8000/docs
-- 🗄️ **Database**: SQLite (auto-configured)
-
-Features available:
-- 🎨 Dark theme interface
-- 🔄 Real-time provider switching
-- ⏱️ Response timing display
-- 💬 Persistent chat history
-- 🔌 Multiple provider support
+#### Database
+- **PostgreSQL** only (no SQLite)
+- Automatic schema creation
+- Persistent data volumes
 
 ## 🧪 Testing
 
@@ -180,49 +146,34 @@ python scripts/test_agent.py      # Core agent functionality
 python scripts/test_visa_agent.py # Visa bulletin expertise
 ```
 
-## ⚙️ Configuration
+## 🛠️ Troubleshooting
 
-### 🗄️ Database Configuration
-
-The application supports multiple database backends:
-
-**Docker Mode (PostgreSQL)**:
-```env
-DOCKER_MODE=true
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=app_db
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=password
+### 📋 Check Service Status
+```bash
+cd docker && docker-compose ps
 ```
 
-**Local Mode (SQLite)**:
-```env
-DOCKER_MODE=false
-DATABASE_PATH=data/visa_bulletins.db
+### 📜 View Logs
+```bash
+cd docker && docker-compose logs api
+cd docker && docker-compose logs web
 ```
 
-### 🤖 LLM Provider Configuration
+### 🔄 Restart Services
+```bash
+cd docker && docker-compose restart
+```
 
-Set your preferred provider in `.env`:
-```env
-# Use Google's free tier
-LLM_PROVIDER=google
-GOOGLE_MODEL=gemini-1.5-flash
+### 🆕 Clean Restart
+```bash
+cd docker && docker-compose down
+python scripts/start.py
+```
 
-# Or use local Ollama
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3.2
-
-# Or use OpenAI (requires API key)
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_api_key_here
-OPENAI_MODEL=gpt-4o
-
-# Or use Anthropic (requires API key)
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your_api_key_here
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+### 🏗️ Development
+To make changes and rebuild:
+```bash
+cd docker && docker-compose up --build
 ```
 
 ## 📊 Current Status

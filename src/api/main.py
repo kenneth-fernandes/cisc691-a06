@@ -23,10 +23,11 @@ config = get_config()
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    mode = "Docker" if config.DOCKER_MODE else "Local"
-    db_type = "PostgreSQL" if config.DOCKER_MODE else "SQLite"
-    logger.info(f"🚀 Starting FastAPI backend server in {mode} mode...")
-    logger.info(f"📊 Database: {db_type}")
+    logger.info("🚀 Starting FastAPI backend server in Docker mode...")
+    logger.info("📊 Database: PostgreSQL")
+    logger.info("🔗 API: http://localhost:8000")
+    logger.info("💻 Frontend: http://localhost:8501")
+    logger.info("📖 API Docs: http://localhost:8000/docs")
     yield
     # Shutdown
     logger.info("🛑 Shutting down FastAPI backend server...")
@@ -76,7 +77,7 @@ async def health_check():
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""
-    logger.error(f"Unhandled exception: {str(exc)}")
+    logger.error(f"Unhandled exception on {request.url}: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
