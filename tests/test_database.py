@@ -14,25 +14,40 @@ def mock_config():
     """Mock configuration"""
     with patch('src.utils.database.Config') as mock:
         config = mock.return_value
-        config.DATABASE_TYPE = "sqlite"
-        config.DATABASE_PATH = ":memory:"
-        config.DOCKER_MODE = False
+        config.DATABASE_TYPE = "postgresql"
+        config.POSTGRES_HOST = "test-db"
+        config.POSTGRES_PORT = 5432
+        config.POSTGRES_DB = "test_db"
+        config.POSTGRES_USER = "test_user"
+        config.POSTGRES_PASSWORD = "test_pass"
+        config.REDIS_HOST = "test-redis"
+        config.REDIS_PORT = 6380
+        config.REDIS_PASSWORD = "test_redis_pass"
+        config.MONGO_HOST = "test-mongodb"
+        config.MONGO_PORT = 27017
+        config.MONGO_USER = "test_user"
+        config.MONGO_PASSWORD = "test_pass"
         yield config
 
-def test_database_factory_sqlite(mock_config):
-    """Test database factory returns SQLite instance"""
-    mock_config.DATABASE_TYPE = "sqlite"
-    db = DatabaseFactory.get_database()
-    assert isinstance(db, SQLiteDatabase)
-
-def test_database_factory_postgresql(mock_config):
-    """Test database factory returns PostgreSQL instance"""
+def test_database_factory_postgresql_default(mock_config):
+    """Test database factory returns PostgreSQL instance (default)"""
     mock_config.DATABASE_TYPE = "postgresql"
     db = DatabaseFactory.get_database()
     assert isinstance(db, PostgreSQLDatabase)
 
-def test_sqlite_connection():
-    """Test SQLite connection creation"""
+def test_database_factory_fallback_sqlite(mock_config):
+    """Test database factory fallback to SQLite"""
+    mock_config.DATABASE_TYPE = "unknown"  # Should fallback to SQLite
+    db = DatabaseFactory.get_database()
+    assert isinstance(db, SQLiteDatabase)
+
+@patch('src.utils.database.Config')
+def test_sqlite_connection_with_mock(mock_config_class):
+    """Test SQLite connection creation with mocked config"""
+    # Mock config to provide DATABASE_PATH
+    mock_config = mock_config_class.return_value
+    mock_config.DATABASE_PATH = ":memory:"
+    
     db = SQLiteDatabase()
     with db.get_connection() as conn:
         cursor = conn.cursor()
@@ -53,9 +68,8 @@ def test_postgresql_connection(mock_connect, mock_config):
         mock_connect.assert_called_once()
 
 @patch('src.utils.database.MongoClient')
-def test_mongo_manager_docker_mode(mock_client, mock_config):
-    """Test MongoDB manager in Docker mode"""
-    mock_config.DOCKER_MODE = True
+def test_mongo_manager_connection(mock_client, mock_config):
+    """Test MongoDB manager connection (Docker mode)"""
     mock_config.MONGO_HOST = "test-mongodb"
     mock_config.MONGO_PORT = 27017
     mock_config.MONGO_USER = "test_user"
@@ -70,9 +84,8 @@ def test_mongo_manager_docker_mode(mock_client, mock_config):
     )
 
 @patch('redis.Redis')
-def test_redis_manager_docker_mode(mock_redis, mock_config):
-    """Test Redis manager in Docker mode"""
-    mock_config.DOCKER_MODE = True
+def test_redis_manager_connection(mock_redis, mock_config):
+    """Test Redis manager connection (Docker mode)"""
     mock_config.REDIS_HOST = "test-redis"
     manager = RedisManager()
     _ = manager.client  # Access client to trigger connection
@@ -82,19 +95,3 @@ def test_redis_manager_docker_mode(mock_redis, mock_config):
         password=mock_config.REDIS_PASSWORD,
         decode_responses=True
     )
-
-@patch('src.utils.database.MongoClient')
-def test_mongo_manager_local_mode(mock_client, mock_config):
-    """Test MongoDB manager in local mode"""
-    mock_config.DOCKER_MODE = False
-    manager = MongoManager()
-    _ = manager.client  # Access client to trigger connection
-    mock_client.assert_called_once_with()
-
-def test_redis_manager_local_mode(mock_config):
-    """Test Redis manager in local mode"""
-    mock_config.DOCKER_MODE = False
-    manager = RedisManager()
-    with patch('redis.Redis') as mock_redis:
-        _ = manager.client  # Access client to trigger connection
-        mock_redis.assert_called_once_with(decode_responses=True)
