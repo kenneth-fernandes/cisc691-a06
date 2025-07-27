@@ -36,8 +36,21 @@ class VisaDatabase:
             print(f"VisaDatabase: Using SQLite - {self.db_path}")
         
         print("VisaDatabase: About to create tables...")
-        self._create_tables()
-        print("VisaDatabase: Tables created successfully")
+        try:
+            self._create_tables()
+            print("VisaDatabase: Tables created successfully")
+        except Exception as e:
+            if self.use_postgres:
+                print(f"VisaDatabase: PostgreSQL connection failed, falling back to SQLite: {e}")
+                # Fall back to SQLite
+                self.use_postgres = False
+                self.database_url = None
+                self.db_path = db_path or VisaConfig.DATABASE_PATH
+                self._ensure_directory_exists()
+                self._create_tables()
+                print("VisaDatabase: Fallback to SQLite successful")
+            else:
+                raise
     
     def _ensure_directory_exists(self):
         """Ensure the database directory exists"""
