@@ -14,6 +14,7 @@ from api.models.analytics import (
     DatabaseStatsResponse
 )
 from api.utils.validation import validate_input, normalize_visa_category, normalize_country_code
+from api.utils.cache import cache_response, CACHE_PRESETS, cache_manager, CacheStats
 from visa.analytics import TrendAnalyzer
 from visa.models import VisaCategory, CountryCode
 from visa.repository import VisaBulletinRepository
@@ -167,6 +168,7 @@ async def get_database_stats():
         raise HTTPException(status_code=500, detail=f"Statistics retrieval failed: {str(e)}")
 
 @router.get("/categories")
+@cache_response(ttl=CACHE_PRESETS["very_long"], prefix="categories")
 async def get_supported_categories():
     """Get list of supported visa categories"""
     return {
@@ -175,6 +177,7 @@ async def get_supported_categories():
     }
 
 @router.get("/countries")
+@cache_response(ttl=CACHE_PRESETS["very_long"], prefix="countries")
 async def get_supported_countries():
     """Get list of supported countries"""
     return {
@@ -182,6 +185,7 @@ async def get_supported_countries():
     }
 
 @router.get("/bulletins")
+@cache_response(ttl=CACHE_PRESETS["long"], prefix="bulletins")
 async def get_all_bulletins(start_year: int = Query(2020), end_year: int = Query(None)):
     """Get all visa bulletins within year range"""
     try:
@@ -213,6 +217,7 @@ async def get_all_bulletins(start_year: int = Query(2020), end_year: int = Query
         raise HTTPException(status_code=500, detail=f"Failed to retrieve bulletins: {str(e)}")
 
 @router.get("/bulletins/{year}/{month}")
+@cache_response(ttl=CACHE_PRESETS["very_long"], prefix="bulletin_detail")
 async def get_bulletin_by_date(year: int, month: int):
     """Get specific visa bulletin by year and month"""
     try:
@@ -247,3 +252,29 @@ async def get_bulletin_by_date(year: int, month: int):
     except Exception as e:
         logger.error(f"Get bulletin error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve bulletin: {str(e)}")
+
+# Cache management endpoints
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache statistics and information"""
+    return CacheStats.get_cache_info()
+
+@router.delete("/cache/clear")
+async def clear_cache():
+    """Clear all API cache entries"""
+    if cache_manager.clear_all():
+        logger.info("Cache cleared successfully")
+        return {"message": "Cache cleared successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to clear cache")
+
+@router.delete("/cache/invalidate/{pattern}")
+async def invalidate_cache(pattern: str):
+    """Invalidate cache entries matching pattern"""
+    from api.utils.cache import invalidate_cache_pattern
+    deleted_count = invalidate_cache_pattern(pattern)
+    return {
+        "message": f"Invalidated {deleted_count} cache entries",
+        "pattern": pattern,
+        "deleted_count": deleted_count
+    }

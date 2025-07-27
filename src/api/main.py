@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 import logging
 
 # Import routers
-from api.routers import agent, analytics, auth
+from api.routers import agent, analytics, auth, websocket
+from api.middleware.cache_middleware import add_cache_headers_middleware, CacheControlMiddleware
 from utils.config import get_config
 
 # Setup logging
@@ -51,10 +52,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add caching middleware
+app.add_middleware(CacheControlMiddleware)
+
+# Add cache headers middleware
+app.middleware("http")(add_cache_headers_middleware())
+
 # Include routers
 app.include_router(agent.router, prefix="/api/agent", tags=["Agent"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(websocket.router, prefix="/api/websocket", tags=["WebSocket"])
 
 @app.get("/")
 async def root():
