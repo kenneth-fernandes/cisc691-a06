@@ -52,15 +52,20 @@ def test_config_loads_mongodb_settings(mock_env):
     assert config.MONGO_USER == "test_user"
     assert config.MONGO_PASSWORD == "test_pass"
 
-def test_docker_mode_setting(mock_env):
-    """Test Docker mode configuration"""
+def test_docker_mode_configuration(mock_env):
+    """Test Docker-only configuration (no DOCKER_MODE attribute needed)"""
     config = Config()
-    assert config.DOCKER_MODE is True
+    # Docker mode is the default and only mode now
+    assert config.DATABASE_TYPE == "postgresql"
+    assert config.POSTGRES_HOST == "test-db"
+    assert config.API_BASE_URL  # Should have API base URL
 
-def test_local_mode_settings(monkeypatch):
-    """Test local mode configuration"""
-    monkeypatch.setenv("DOCKER_MODE", "False")
-    monkeypatch.setenv("DATABASE_TYPE", "sqlite")
+def test_llm_provider_settings(monkeypatch):
+    """Test LLM provider configuration"""
+    monkeypatch.setenv("LLM_PROVIDER", "google")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+    monkeypatch.setenv("GOOGLE_MODEL", "gemini-1.5-flash")
     config = Config()
-    assert config.DOCKER_MODE is False
-    assert config.DATABASE_TYPE == "sqlite"
+    assert config.LLM_PROVIDER == "google"
+    assert config.GOOGLE_API_KEY == "test-key"
+    assert config.GOOGLE_MODEL == "gemini-1.5-flash"

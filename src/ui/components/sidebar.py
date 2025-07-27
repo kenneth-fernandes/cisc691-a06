@@ -2,7 +2,7 @@
 Sidebar component implementation
 """
 import streamlit as st
-from utils.config import get_config
+from ui.utils.api_client import get_api_client
 
 def render_sidebar():
     """Render the sidebar with settings"""
@@ -16,24 +16,45 @@ def render_sidebar():
         
         # Provider selection
         st.markdown("<p style='margin-bottom: 0.5rem; font-weight: 600;'>🔌 Provider</p>", unsafe_allow_html=True)
-        config = get_config()
-        selected_provider = st.selectbox(
-            "Select Provider",
-            config.get_supported_providers(),
-            index=config.get_supported_providers().index(config.LLM_PROVIDER),
-            label_visibility="collapsed"
-        )
+        
+        # Get supported providers from API
+        api_client = get_api_client()
+        providers_response = api_client.get_supported_providers()
+        
+        if "error" not in providers_response:
+            supported_providers = providers_response.get("providers", ["google", "openai", "anthropic", "ollama"])
+        else:
+            supported_providers = ["google", "openai", "anthropic", "ollama"]  # Fallback
         
         # Initialize provider in session state if not present
         if "current_provider" not in st.session_state:
-            st.session_state.current_provider = config.LLM_PROVIDER
+            st.session_state.current_provider = "google"
+        
+        # Get current index
+        try:
+            current_index = supported_providers.index(st.session_state.current_provider)
+        except ValueError:
+            current_index = 0
+            st.session_state.current_provider = supported_providers[0]
+        
+        selected_provider = st.selectbox(
+            "Select Provider",
+            supported_providers,
+            index=current_index,
+            label_visibility="collapsed"
+        )
             
-        # Update agent if provider changed
+        # Update provider if changed
         if selected_provider != st.session_state.current_provider:
             st.session_state.current_provider = selected_provider
-            if "agent" in st.session_state:
-                from agent.factory import create_agent
-                st.session_state.agent = create_agent("default", provider=selected_provider)
+            # Update agent config via API
+            if "session_id" in st.session_state:
+                config = {
+                    "agent_type": "default",
+                    "provider": selected_provider,
+                    "mode": "general"
+                }
+                api_client.update_agent_config(st.session_state.session_id, config)
         
         st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
         
@@ -43,9 +64,22 @@ def render_sidebar():
             if st.button("🗑️ Clear Chat", use_container_width=True):
                 if "messages" in st.session_state:
                     st.session_state.messages = []
-                if "agent" in st.session_state:
-                    st.session_state.agent.clear_history()
+                # Clear chat history via API by creating new session
+                if "session_id" in st.session_state:
+                    import uuid
+                    st.session_state.session_id = str(uuid.uuid4())
                 st.rerun()
+        
+        st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
+        
+        # API Status
+        st.markdown("<p style='margin-bottom: 0.5rem; font-weight: 600;'>🔗 API Status</p>", unsafe_allow_html=True)
+        health_response = api_client.health_check()
+        if "error" not in health_response and health_response.get("status") == "healthy":
+            st.success("✅ Connected")
+        else:
+            st.error("❌ Disconnected")
+            st.caption("Make sure API server is running")
         
         st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
         

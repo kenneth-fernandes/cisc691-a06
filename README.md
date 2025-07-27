@@ -1,8 +1,8 @@
-# 🤖 AI Agent Project
+# 🤖 Visa Bulletin AI Agent
 
 ![CI](https://github.com/kenneth-fernandes/cisc691-a06/actions/workflows/ci.yml/badge.svg)
 
-A flexible AI agent implementation using LangChain framework that supports multiple LLM providers and can run with both cloud and local models.
+Containerized AI agent with REST API backend for US visa bulletin analysis and multi-provider LLM chat.
 
 ## ✨ Features
 
@@ -32,118 +32,123 @@ A flexible AI agent implementation using LangChain framework that supports multi
   - 📚 Layered architecture with clean separation
   - 🔄 Provider-agnostic design
   - 🛠️ Configuration management
-  - 🗄️ Multi-database support (SQLite, PostgreSQL)
-  - 🐳 Docker containerization with health checks
+  - 🗄️ PostgreSQL database with health checks
+  - 🐳 Full Docker containerization
+  - ⚡ REST API with FastAPI backend
+  - 🔄 Redis caching for performance
+  - 🔌 WebSocket support for real-time features
 
-## 🚀 Setup
+## 🚀 Quick Start
 
-### 🐳 Docker Setup (Recommended)
-
-For a complete environment with PostgreSQL, Redis, and MongoDB:
-
-1. 📥 Clone the repository:
+### 1. 📥 Clone and Setup
 ```bash
-git clone [repository-url]
+git clone <repository-url>
 cd cisc691-a06
+cp .env.example .env
 ```
 
-2. 🐳 Start Docker services:
+### 2. 🔑 Add API Keys to `.env`
 ```bash
-cd docker
-docker-compose up -d
+# For Google Gemini (Free tier - recommended)
+GOOGLE_API_KEY=your_google_api_key_here
+
+# For OpenAI (if you have one)
+OPENAI_API_KEY=your_openai_key_here
+
+# For Anthropic (if you have one)  
+ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
 
-This will start:
-- 🗄️ PostgreSQL database (port 5432)
-- 🔄 Redis cache (port 6379) 
-- 📊 MongoDB (port 27017)
-- 🌐 Streamlit web interface (port 8501)
-
-3. ⚙️ Configure environment:
-- The application will automatically use PostgreSQL in Docker mode
-- Environment variables are configured in docker-compose.yml
-
-### 🔧 Local Development Setup
-
-For local development with SQLite:
-
-1. 📥 Clone the repository:
+### 3. 🚀 Start Application
 ```bash
-git clone [repository-url]
-cd cisc691-a06
+# Option 1: Using start script
+python scripts/start.py
+
+# Option 2: Direct docker-compose
+cd docker && docker-compose up --build
 ```
 
-2. 🌍 Create and activate virtual environment:
+### 4. 🤖 (Optional) Setup Ollama for Local Models
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Install Ollama from https://ollama.com/download
+# Then pull models:
+ollama pull llama3.2
+
+# Verify Ollama is running:
+curl http://localhost:11434/api/tags
 ```
 
-3. 📦 Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+### 5. 🌐 Access Services
+- **Frontend**: http://localhost:8501
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Cache Stats**: http://localhost:8000/api/analytics/cache/stats
+- **WebSocket Stats**: http://localhost:8000/api/websocket/stats
 
-4. ⚙️ Configure environment:
-- Copy `.env.example` to `.env`
-- Add your API keys (if using cloud providers)
-- For local setup, install Ollama:
-  ```bash
-  # Install Ollama
-  curl -fsSL https://ollama.com/install.sh | sh
-  
-  # Pull Llama model
-  ollama pull llama3.2
-  ```
+## 🐳 Docker Services
 
-## 🚀 Running the Application
+The application runs these containerized services:
 
-### 🐳 Docker Mode
-If using Docker, the application starts automatically:
-- Access the UI at `http://localhost:8501`
-- The application uses PostgreSQL database automatically
+- **🗄️ PostgreSQL Database** - Main data storage (port 5432)
+- **🔄 Redis** - Caching layer (port 6379)
+- **📊 MongoDB** - Document storage (port 27017)
+- **⚡ FastAPI Backend** - REST API with WebSocket support (port 8000)
+- **💻 Streamlit Frontend** - Web UI (port 8501)
 
-### 🔧 Local Mode
-1. Start the Streamlit application:
-```bash
-streamlit run src/main.py
-```
+### 🔧 Configuration
+All configuration is handled through environment variables in `.env`:
 
-2. Access the UI:
-- Open your browser to `http://localhost:8501`
-- Use the sidebar to select your preferred AI provider
-- Start chatting with the AI agent
+#### 🤖 LLM Providers
+- **🌐 Google Gemini** (default, free tier)
+- **🔷 OpenAI GPT** (paid)
+- **🟣 Anthropic Claude** (paid)
+- **💻 Ollama** (local installation required)
+  - Install locally: https://ollama.com/download
+  - Pull models: `ollama pull llama3.2`
+  - Runs on localhost:11434, accessible to Docker containers
 
-Features available:
-- 🎨 Dark theme interface
-- 🔄 Real-time provider switching
-- ⏱️ Response timing display
-- 💬 Persistent chat history
-- 🔌 Multiple provider support
+#### 🗄️ Database
+- **PostgreSQL only** (no SQLite)
+- Automatic schema creation
+- Persistent data volumes
+
+### Configuration
+All configuration is handled through environment variables in `.env`:
+
+#### LLM Providers
+- **Google Gemini** (default, free tier)
+- **OpenAI GPT** (paid)
+- **Anthropic Claude** (paid)
+- **Ollama** (local models via Docker)
+
+#### Database
+- **PostgreSQL** only (no SQLite)
+- Automatic schema creation
+- Persistent data volumes
 
 ## 🧪 Testing
 
 ### Comprehensive Test Suite
 Run the full test suite to verify functionality:
 ```bash
-# Run all fast tests (recommended)
-python run_tests.py --fast --coverage
+# Run all tests
+pytest tests/ -v
 
 # Run specific test categories
-python run_tests.py --unit        # Unit tests only
-python run_tests.py --integration # Integration tests only
-python run_tests.py --mock        # Mock tests only
+pytest tests/test_api_* -v        # API tests
+pytest tests/test_*_caching.py -v # Caching tests
+pytest tests/test_*_websocket.py -v # WebSocket tests
 
-# Direct pytest usage
-pytest tests/ -v                  # All tests
-pytest tests/ -m "unit" -v        # Unit tests only
+# Run with coverage
+pytest tests/ --cov=src --cov-report=html
 ```
 
 ### Test Categories
 - **🔬 Unit Tests**: Individual component testing (models, validators, parsers)
 - **🔗 Integration Tests**: End-to-end workflow testing
-- **🎭 Mock Tests**: Tests with mocked dependencies (no network calls)
-- **🌐 Network Tests**: Real external API testing (optional)
+- **⚡ API Tests**: REST API endpoint testing
+- **🔄 Cache Tests**: Redis caching functionality
+- **🔌 WebSocket Tests**: Real-time communication testing
 
 ### Coverage
 Current test coverage: **90%+** for visa parsing system components
@@ -159,49 +164,34 @@ python scripts/test_agent.py      # Core agent functionality
 python scripts/test_visa_agent.py # Visa bulletin expertise
 ```
 
-## ⚙️ Configuration
+## 🛠️ Troubleshooting
 
-### 🗄️ Database Configuration
-
-The application supports multiple database backends:
-
-**Docker Mode (PostgreSQL)**:
-```env
-DOCKER_MODE=true
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=app_db
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=password
+### 📋 Check Service Status
+```bash
+cd docker && docker-compose ps
 ```
 
-**Local Mode (SQLite)**:
-```env
-DOCKER_MODE=false
-DATABASE_PATH=data/visa_bulletins.db
+### 📜 View Logs
+```bash
+cd docker && docker-compose logs api
+cd docker && docker-compose logs web
 ```
 
-### 🤖 LLM Provider Configuration
+### 🔄 Restart Services
+```bash
+cd docker && docker-compose restart
+```
 
-Set your preferred provider in `.env`:
-```env
-# Use Google's free tier
-LLM_PROVIDER=google
-GOOGLE_MODEL=gemini-1.5-flash
+### 🆕 Clean Restart
+```bash
+cd docker && docker-compose down
+python scripts/start.py
+```
 
-# Or use local Ollama
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3.2
-
-# Or use OpenAI (requires API key)
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_api_key_here
-OPENAI_MODEL=gpt-4o
-
-# Or use Anthropic (requires API key)
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your_api_key_here
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+### 🏗️ Development
+To make changes and rebuild:
+```bash
+cd docker && docker-compose up --build
 ```
 
 ## 📊 Current Status
@@ -218,11 +208,11 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
   - ✅ Movement analysis and predictions
   - ✅ Historical trend analysis
   - ✅ Expert system prompts and templates
-- ✅ **Multi-database architecture** (NEW)
-  - ✅ Abstract database interface
-  - ✅ SQLite implementation for local development
-  - ✅ PostgreSQL implementation for production
-  - ✅ Factory pattern for automatic database selection
+- ✅ **API-first architecture** (NEW)
+  - ✅ FastAPI backend with comprehensive REST endpoints
+  - ✅ Redis caching for analytics performance
+  - ✅ WebSocket support for real-time features
+  - ✅ Multi-database support (PostgreSQL, Redis, MongoDB)
   - ✅ Docker containerization with health checks
 - ✅ **Machine Learning Prediction Models** (NEW)
   - ✅ Random Forest regression for date advancement predictions

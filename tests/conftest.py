@@ -3,10 +3,33 @@ Pytest configuration and shared fixtures
 """
 import pytest
 import sys
+import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from datetime import date
 import json
+
+# Set environment variables before any imports
+os.environ.update({
+    "GOOGLE_API_KEY": "test_key_for_ci",
+    "OPENAI_API_KEY": "test_key_for_ci", 
+    "ANTHROPIC_API_KEY": "test_key_for_ci",
+    "POSTGRES_HOST": "localhost",
+    "POSTGRES_PORT": "5432",
+    "POSTGRES_DB": "test_db",
+    "POSTGRES_USER": "test_user",
+    "POSTGRES_PASSWORD": "test_password",
+    "REDIS_HOST": "localhost",
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": "test_password",
+    "MONGO_HOST": "localhost",
+    "MONGO_PORT": "27017",
+    "MONGO_DB": "test_db",
+    "MONGO_USER": "test_user",
+    "MONGO_PASSWORD": "test_password",
+    "DOCKER_MODE": "false",
+    "DEBUG": "true"
+})
 
 # Add src to path
 src_path = str(Path(__file__).parent.parent / "src")
@@ -207,3 +230,53 @@ def assert_valid_category_data(category_data):
     assert isinstance(category_data.category, VisaCategory)
     assert isinstance(category_data.country, CountryCode)
     assert isinstance(category_data.status, BulletinStatus)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_llm_providers():
+    """Mock all LLM providers to avoid API key validation"""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = MagicMock(content="Mock LLM response")
+    
+    with patch('langchain_google_genai.ChatGoogleGenerativeAI', return_value=mock_llm), \
+         patch('langchain_openai.ChatOpenAI', return_value=mock_llm), \
+         patch('langchain_anthropic.ChatAnthropic', return_value=mock_llm), \
+         patch('langchain_ollama.ChatOllama', return_value=mock_llm):
+        yield
+
+
+@pytest.fixture
+def mock_agent():
+    """Mock agent for testing without real LLM calls"""
+    with patch('api.routers.agent.get_or_create_agent') as mock:
+        mock_agent_instance = MockAgent()
+        mock.return_value = mock_agent_instance
+        yield mock_agent_instance
+
+
+class MockAgent:
+    """Mock agent for testing"""
+    
+    def __init__(self):
+        self.conversation_history = []
+    
+    def chat(self, message: str) -> str:
+        """Mock chat method"""
+        response = f"Mock response to: {message}"
+        self.conversation_history.append({
+            "role": "user",
+            "content": message
+        })
+        self.conversation_history.append({
+            "role": "assistant", 
+            "content": response
+        })
+        return response
+    
+    def get_conversation_history(self):
+        """Mock conversation history"""
+        return self.conversation_history
+    
+    def clear_conversation(self):
+        """Mock clear conversation"""
+        self.conversation_history = []

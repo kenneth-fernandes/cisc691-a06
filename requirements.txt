@@ -16,7 +16,8 @@ langchain-ollama>=0.1.0     # For Ollama integration
 
 # Web framework and API
 fastapi>=0.100.0
-uvicorn>=0.20.0
+uvicorn[standard]>=0.20.0  # Include WebSocket support
+websockets>=11.0.0         # WebSocket support
 pydantic>=2.0.0
 
 # Data handling

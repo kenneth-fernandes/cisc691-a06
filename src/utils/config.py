@@ -9,44 +9,41 @@ class Config:
     """Configuration class for managing application settings"""
     
     def __init__(self):
-        """Initialize config after loading environment variables"""
+        """Initialize config for Docker-only deployment"""
         # LLM Provider Configuration
-        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().split('#')[0].strip()
+        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google").strip().split('#')[0].strip()
         
-        # OpenAI Configuration (PAID - you have Plus)
+        # OpenAI Configuration
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")  # Latest model
+        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
         
-        # Anthropic Configuration (PAID - you have Pro)
+        # Anthropic Configuration
         self.ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-        self.ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")  # Latest model
+        self.ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         
-        # Google Configuration (FREE TIER)
+        # Google Configuration (Default)
         self.GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-        self.GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-1.5-flash")  # Free tier model
+        self.GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-1.5-flash")
         
-        # Ollama Configuration (LOCAL - FREE)
-        self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")  # Local model
-        self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")  # Default for Docker
+        # Ollama Configuration
+        self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+        self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
         
         # Application Configuration
-        self.APP_NAME = os.getenv("APP_NAME", "AI Agent")
+        self.APP_NAME = os.getenv("APP_NAME", "Visa Bulletin AI")
         self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
         self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
         
-        # Server Configuration
+        # Server Configuration (Docker internal)
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "8000"))
         
-        # Environment Mode
-        self.DOCKER_MODE = os.getenv("DOCKER_MODE", "False").lower() == "true"
+        # API Configuration (Docker service communication)
+        self.API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8000")
         
-        # Database Configuration
-        self.DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")
-        self.DATABASE_PATH = os.getenv("DATABASE_PATH", "data/visa_bulletins.db")
-        
-        # PostgreSQL Configuration
+        # Database Configuration (PostgreSQL only)
+        self.DATABASE_TYPE = "postgresql"
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
         self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
         self.POSTGRES_DB = os.getenv("POSTGRES_DB", "app_db")
@@ -55,7 +52,7 @@ class Config:
         
         # Redis Configuration
         self.REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
+        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
         
         # MongoDB Configuration
@@ -97,8 +94,8 @@ class Config:
         return ["openai", "anthropic", "google", "ollama"]
 
 def get_config(force_reload: bool = True) -> Config:
-    """Get configuration instance"""
-    # Load environment variables from .env file (always override by default)
+    """Get configuration instance for Docker deployment"""
+    # Load environment variables from .env file
     load_dotenv(override=force_reload)
     config = Config()
     config.validate_config(config.LLM_PROVIDER)
