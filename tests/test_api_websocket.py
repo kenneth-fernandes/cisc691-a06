@@ -314,7 +314,7 @@ class TestWebSocketEndpoints:
             }
             mock_manager.typing_status = {"session_1": False}
             
-            response = client.get("/api/websocket/websocket/stats")
+            response = client.get("/api/websocket/stats")
             assert response.status_code == 200
             
             data = response.json()
@@ -335,7 +335,7 @@ class TestWebSocketEndpoints:
                 "level": "warning"
             }
             
-            response = client.post("/api/websocket/websocket/broadcast", json=message_data)
+            response = client.post("/api/websocket/broadcast", json=message_data)
             assert response.status_code == 200
             
             data = response.json()
@@ -353,7 +353,7 @@ class TestWebSocketEndpoints:
             mock_manager.active_connections = {session_id: mock_websocket}
             mock_manager.disconnect = MagicMock()
             
-            response = client.delete(f"/api/websocket/websocket/disconnect/{session_id}")
+            response = client.delete(f"/api/websocket/disconnect/{session_id}")
             assert response.status_code == 200
             
             data = response.json()
@@ -367,7 +367,7 @@ class TestWebSocketEndpoints:
         with patch('api.routers.websocket.connection_manager') as mock_manager:
             mock_manager.is_connected.return_value = False
             
-            response = client.delete(f"/api/websocket/websocket/disconnect/{session_id}")
+            response = client.delete(f"/api/websocket/disconnect/{session_id}")
             assert response.status_code == 404
             
             data = response.json()

@@ -294,7 +294,7 @@ async def heartbeat_loop(websocket: WebSocket, session_id: str, interval: int = 
 
 
 # WebSocket management endpoints
-@router.get("/websocket/stats")
+@router.get("/stats")
 async def get_websocket_stats():
     """Get WebSocket connection statistics"""
     return {
@@ -311,7 +311,7 @@ async def get_websocket_stats():
     }
 
 
-@router.post("/websocket/broadcast")
+@router.post("/broadcast")
 async def broadcast_message(message: SystemMessage):
     """Broadcast system message to all WebSocket connections"""
     broadcast_msg = WebSocketMessage(
@@ -329,7 +329,7 @@ async def broadcast_message(message: SystemMessage):
     }
 
 
-@router.delete("/websocket/disconnect/{session_id}")
+@router.delete("/disconnect/{session_id}")
 async def force_disconnect_session(session_id: str):
     """Force disconnect a WebSocket session"""
     if connection_manager.is_connected(session_id):

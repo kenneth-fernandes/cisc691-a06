@@ -52,7 +52,7 @@ class Config:
         
         # Redis Configuration
         self.REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
+        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
         
         # MongoDB Configuration

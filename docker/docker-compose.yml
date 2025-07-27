@@ -69,13 +69,13 @@ services:
       context: ./redis
       dockerfile: Dockerfile
     ports:
-      - "${REDIS_PORT}:6379"
+      - "6380:6379"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6379", "-a", "redis_password", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
