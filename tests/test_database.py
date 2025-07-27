@@ -5,7 +5,6 @@ from src.utils.database import (
     DatabaseFactory,
     SQLiteDatabase,
     PostgreSQLDatabase,
-    MongoManager,
     RedisManager
 )
 
@@ -23,10 +22,6 @@ def mock_config():
         config.REDIS_HOST = "test-redis"
         config.REDIS_PORT = 6380
         config.REDIS_PASSWORD = "test_redis_pass"
-        config.MONGO_HOST = "test-mongodb"
-        config.MONGO_PORT = 27017
-        config.MONGO_USER = "test_user"
-        config.MONGO_PASSWORD = "test_pass"
         yield config
 
 def test_database_factory_postgresql_default(mock_config):
@@ -67,21 +62,6 @@ def test_postgresql_connection(mock_connect, mock_config):
     with db.get_connection():
         mock_connect.assert_called_once()
 
-@patch('src.utils.database.MongoClient')
-def test_mongo_manager_connection(mock_client, mock_config):
-    """Test MongoDB manager connection (Docker mode)"""
-    mock_config.MONGO_HOST = "test-mongodb"
-    mock_config.MONGO_PORT = 27017
-    mock_config.MONGO_USER = "test_user"
-    mock_config.MONGO_PASSWORD = "test_pass"
-    manager = MongoManager()
-    _ = manager.client  # Access client to trigger connection
-    mock_client.assert_called_once_with(
-        host="test-mongodb",
-        port=27017,
-        username="test_user",
-        password="test_pass"
-    )
 
 @patch('redis.Redis')
 def test_redis_manager_connection(mock_redis, mock_config):

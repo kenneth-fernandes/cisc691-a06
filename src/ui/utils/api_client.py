@@ -62,8 +62,7 @@ class APIClient:
     
     def get_conversation_history(self, session_id: str) -> Dict:
         """Get conversation history for session"""
-        params = {"session_id": session_id}
-        return self._make_request("GET", "/api/agent/conversation", params=params)
+        return self._make_request("GET", f"/api/agent/conversation/{session_id}")
     
     def update_agent_config(self, session_id: str, config: Dict) -> Dict:
         """Update agent configuration for session"""
@@ -71,7 +70,7 @@ class APIClient:
             "session_id": session_id,
             "config": config
         }
-        return self._make_request("POST", "/api/agent/config", data=data)
+        return self._make_request("POST", "/api/agent/configure", data=data)
     
     def get_supported_providers(self) -> Dict:
         """Get list of supported LLM providers"""

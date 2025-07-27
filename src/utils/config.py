@@ -55,12 +55,6 @@ class Config:
         self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
         
-        # MongoDB Configuration
-        self.MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")
-        self.MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-        self.MONGO_DB = os.getenv("MONGO_DB", "app_db")
-        self.MONGO_USER = os.getenv("MONGO_USER", "admin")
-        self.MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "password")
     
     def validate_config(self, provider: str = None) -> bool:
         """Validate that required configuration is present"""

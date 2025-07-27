@@ -37,30 +37,6 @@ class TestRedisConfiguration:
         assert isinstance(config.REDIS_PASSWORD, str)
 
 
-class TestMongoDBConfiguration:
-    """Test MongoDB configuration"""
-    
-    def test_mongodb_default_configuration(self):
-        """Test MongoDB default configuration"""
-        config = Config()
-        assert config.MONGO_HOST == "mongodb"
-        assert config.MONGO_PORT == 27017
-        assert config.MONGO_DB == "app_db"
-        assert config.MONGO_USER == "admin"
-        assert config.MONGO_PASSWORD == "password"
-    
-    @patch.dict(os.environ, {
-        'MONGO_HOST': 'test-mongo',
-        'MONGO_PORT': '27018',
-        'MONGO_DB': 'test_db'
-    })
-    def test_mongodb_environment_override(self):
-        """Test MongoDB configuration from environment"""
-        config = Config()
-        assert config.MONGO_HOST == "test-mongo"
-        assert config.MONGO_PORT == 27018
-        assert config.MONGO_DB == "test_db"
-
 
 class TestPostgreSQLConfiguration:
     """Test PostgreSQL configuration"""

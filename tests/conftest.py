@@ -22,11 +22,6 @@ os.environ.update({
     "REDIS_HOST": "localhost",
     "REDIS_PORT": "6379",
     "REDIS_PASSWORD": "test_password",
-    "MONGO_HOST": "localhost",
-    "MONGO_PORT": "27017",
-    "MONGO_DB": "test_db",
-    "MONGO_USER": "test_user",
-    "MONGO_PASSWORD": "test_password",
     "DOCKER_MODE": "false",
     "DEBUG": "true"
 })

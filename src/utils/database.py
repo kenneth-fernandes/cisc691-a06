@@ -8,7 +8,6 @@ from contextlib import contextmanager
 
 import psycopg2
 from psycopg2.extras import DictCursor
-from pymongo import MongoClient
 import redis
 
 from .config import Config
@@ -69,42 +68,6 @@ class PostgreSQLDatabase:
         finally:
             conn.close()
 
-class MongoManager:
-    """MongoDB connection manager with local fallback"""
-    
-    def __init__(self):
-        self.config = Config()
-        self._client = None
-        self._db = None
-    
-    @property
-    def client(self):
-        """Get MongoDB client with lazy initialization"""
-        if self._client is None:
-            if self.config.DOCKER_MODE:
-                self._client = MongoClient(
-                    host=self.config.MONGO_HOST,
-                    port=self.config.MONGO_PORT,
-                    username=self.config.MONGO_USER,
-                    password=self.config.MONGO_PASSWORD
-                )
-            else:
-                self._client = MongoClient()  # Local default connection
-        return self._client
-    
-    @property
-    def db(self):
-        """Get database instance"""
-        if self._db is None:
-            self._db = self.client[self.config.MONGO_DB]
-        return self._db
-    
-    def close(self):
-        """Close MongoDB connection"""
-        if self._client:
-            self._client.close()
-            self._client = None
-            self._db = None
 
 class RedisManager:
     """Redis connection manager with local fallback"""
@@ -136,5 +99,4 @@ class RedisManager:
 
 # Global instances for convenience
 db = DatabaseFactory.get_database()
-mongo = MongoManager()
 redis_client = RedisManager()
