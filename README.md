@@ -34,6 +34,9 @@ Containerized AI agent with REST API backend for US visa bulletin analysis and m
   - 🛠️ Configuration management
   - 🗄️ PostgreSQL database with health checks
   - 🐳 Full Docker containerization
+  - ⚡ REST API with FastAPI backend
+  - 🔄 Redis caching for performance
+  - 🔌 WebSocket support for real-time features
 
 ## 🚀 Quick Start
 
@@ -79,15 +82,17 @@ curl http://localhost:11434/api/tags
 - **Frontend**: http://localhost:8501
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
+- **Cache Stats**: http://localhost:8000/api/analytics/cache/stats
+- **WebSocket Stats**: http://localhost:8000/api/websocket/stats
 
 ## 🐳 Docker Services
 
 The application runs these containerized services:
 
 - **🗄️ PostgreSQL Database** - Main data storage (port 5432)
-- **🔄 Redis** - Caching and session storage (port 6379)
+- **🔄 Redis** - Caching layer (port 6379)
 - **📊 MongoDB** - Document storage (port 27017)
-- **⚡ FastAPI Backend** - REST API server (port 8000)
+- **⚡ FastAPI Backend** - REST API with WebSocket support (port 8000)
 - **💻 Streamlit Frontend** - Web UI (port 8501)
 
 ### 🔧 Configuration
@@ -126,24 +131,24 @@ All configuration is handled through environment variables in `.env`:
 ### Comprehensive Test Suite
 Run the full test suite to verify functionality:
 ```bash
-# Run all fast tests (recommended)
-python run_tests.py --fast --coverage
+# Run all tests
+pytest tests/ -v
 
 # Run specific test categories
-python run_tests.py --unit        # Unit tests only
-python run_tests.py --integration # Integration tests only
-python run_tests.py --mock        # Mock tests only
+pytest tests/test_api_* -v        # API tests
+pytest tests/test_*_caching.py -v # Caching tests
+pytest tests/test_*_websocket.py -v # WebSocket tests
 
-# Direct pytest usage
-pytest tests/ -v                  # All tests
-pytest tests/ -m "unit" -v        # Unit tests only
+# Run with coverage
+pytest tests/ --cov=src --cov-report=html
 ```
 
 ### Test Categories
 - **🔬 Unit Tests**: Individual component testing (models, validators, parsers)
 - **🔗 Integration Tests**: End-to-end workflow testing
-- **🎭 Mock Tests**: Tests with mocked dependencies (no network calls)
-- **🌐 Network Tests**: Real external API testing (optional)
+- **⚡ API Tests**: REST API endpoint testing
+- **🔄 Cache Tests**: Redis caching functionality
+- **🔌 WebSocket Tests**: Real-time communication testing
 
 ### Coverage
 Current test coverage: **90%+** for visa parsing system components
@@ -203,11 +208,11 @@ cd docker && docker-compose up --build
   - ✅ Movement analysis and predictions
   - ✅ Historical trend analysis
   - ✅ Expert system prompts and templates
-- ✅ **Multi-database architecture** (NEW)
-  - ✅ Abstract database interface
-  - ✅ SQLite implementation for local development
-  - ✅ PostgreSQL implementation for production
-  - ✅ Factory pattern for automatic database selection
+- ✅ **API-first architecture** (NEW)
+  - ✅ FastAPI backend with comprehensive REST endpoints
+  - ✅ Redis caching for analytics performance
+  - ✅ WebSocket support for real-time features
+  - ✅ Multi-database support (PostgreSQL, Redis, MongoDB)
   - ✅ Docker containerization with health checks
 - ✅ **Machine Learning Prediction Models** (NEW)
   - ✅ Random Forest regression for date advancement predictions
