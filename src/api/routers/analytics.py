@@ -110,11 +110,18 @@ async def get_historical_data(
     try:
         visa_category, country_code = validate_input(category, country)
         
+        # The repository method only takes years_back parameter
+        if start_year:
+            from datetime import datetime
+            current_year = datetime.now().year
+            years_back = current_year - start_year
+        else:
+            years_back = 5  # default
+            
         history = repository.get_category_history(
             category=visa_category,
             country=country_code,
-            start_year=start_year,
-            end_year=end_year
+            years_back=years_back
         )
         
         # Convert to dictionary format
@@ -173,3 +180,70 @@ async def get_supported_countries():
     return {
         "countries": [country.value for country in CountryCode]
     }
+
+@router.get("/bulletins")
+async def get_all_bulletins(start_year: int = Query(2020), end_year: int = Query(None)):
+    """Get all visa bulletins within year range"""
+    try:
+        if end_year is None:
+            from datetime import datetime
+            end_year = datetime.now().year
+        
+        bulletins = repository.get_bulletins_by_year_range(start_year, end_year)
+        
+        # Convert to simple dict format for JSON response
+        bulletin_list = []
+        for bulletin in bulletins:
+            bulletin_list.append({
+                "fiscal_year": bulletin.fiscal_year,
+                "month": bulletin.month,
+                "year": bulletin.year,
+                "bulletin_date": bulletin.bulletin_date.isoformat() if bulletin.bulletin_date else None,
+                "source_url": bulletin.source_url,
+                "categories_count": len(bulletin.categories)
+            })
+        
+        return {
+            "bulletins": bulletin_list,
+            "count": len(bulletin_list),
+            "year_range": f"{start_year}-{end_year}"
+        }
+    except Exception as e:
+        logger.error(f"Get bulletins error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve bulletins: {str(e)}")
+
+@router.get("/bulletins/{year}/{month}")
+async def get_bulletin_by_date(year: int, month: int):
+    """Get specific visa bulletin by year and month"""
+    try:
+        # The repository method expects (fiscal_year, month, year) but we'll use year as both fiscal_year and year
+        bulletin = repository.get_bulletin_by_date(year, month, year)
+        if not bulletin:
+            raise HTTPException(status_code=404, detail=f"No bulletin found for {year}/{month}")
+        
+        # Convert to dict format for JSON response
+        bulletin_data = {
+            "fiscal_year": bulletin.fiscal_year,
+            "month": bulletin.month,
+            "year": bulletin.year,
+            "bulletin_date": bulletin.bulletin_date.isoformat() if bulletin.bulletin_date else None,
+            "source_url": bulletin.source_url,
+            "categories": []
+        }
+        
+        for cat in bulletin.categories:
+            bulletin_data["categories"].append({
+                "category": cat.category.value,
+                "country": cat.country.value,
+                "final_action_date": cat.final_action_date.isoformat() if cat.final_action_date else None,
+                "filing_date": cat.filing_date.isoformat() if cat.filing_date else None,
+                "status": cat.status,
+                "notes": cat.notes
+            })
+        
+        return bulletin_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get bulletin error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve bulletin: {str(e)}")

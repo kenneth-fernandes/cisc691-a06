@@ -25,7 +25,7 @@ class Config:
         self.GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
         self.GOOGLE_MODEL = os.getenv("GOOGLE_MODEL", "gemini-1.5-flash")
         
-        # Ollama Configuration (Docker internal)
+        # Ollama Configuration
         self.OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
         

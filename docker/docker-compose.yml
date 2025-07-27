@@ -11,9 +11,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
       DOCKER_MODE: true
+      PYTHONPATH: /app/src
     volumes:
       - ../:/app
-    command: ["python", "scripts/start_api.py"]
+    command: ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -34,8 +35,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
       API_BASE_URL: http://api:8000
       DOCKER_MODE: true
+      PYTHONPATH: /app/src
     volumes:
       - ../:/app
+    working_dir: /app
     command: ["streamlit", "run", "src/main.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]

@@ -65,7 +65,17 @@ python scripts/start.py
 cd docker && docker-compose up --build
 ```
 
-### 4. 🌐 Access Services
+### 4. 🤖 (Optional) Setup Ollama for Local Models
+```bash
+# Install Ollama from https://ollama.com/download
+# Then pull models:
+ollama pull llama3.2
+
+# Verify Ollama is running:
+curl http://localhost:11434/api/tags
+```
+
+### 5. 🌐 Access Services
 - **Frontend**: http://localhost:8501
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
@@ -87,7 +97,10 @@ All configuration is handled through environment variables in `.env`:
 - **🌐 Google Gemini** (default, free tier)
 - **🔷 OpenAI GPT** (paid)
 - **🟣 Anthropic Claude** (paid)
-- **💻 Ollama** (local models via Docker)
+- **💻 Ollama** (local installation required)
+  - Install locally: https://ollama.com/download
+  - Pull models: `ollama pull llama3.2`
+  - Runs on localhost:11434, accessible to Docker containers
 
 #### 🗄️ Database
 - **PostgreSQL only** (no SQLite)
