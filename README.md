@@ -17,6 +17,7 @@ Containerized AI agent with REST API backend for US visa bulletin analysis and m
   - 🧠 Conversation memory
   - ⚙️ Configurable system prompts
   - ⏱️ Response timing metrics
+  - 🎯 **Expert Mode Selection**: Switch between general assistance and specialized visa expertise
 
 - 📊 **US Visa Bulletin Predictions** (NEW):
   - 📈 **Complete Employment-based category support** (EB-1, EB-2, EB-3, EB-4, EB-5)
@@ -84,6 +85,23 @@ curl http://localhost:11434/api/tags
 - **API Docs**: http://localhost:8000/docs
 - **Cache Stats**: http://localhost:8000/api/analytics/cache/stats
 - **WebSocket Stats**: http://localhost:8000/api/websocket/stats
+
+## 🎯 Expert Mode Feature
+
+The UI sidebar now includes a dedicated **Expert Mode Selector** that allows users to switch between different agent specializations:
+
+### 🔄 Available Modes
+- **🤖 General**: General purpose AI assistant for everyday conversations
+- **🎯 Visa Expert**: Specialized AI with deep expertise in U.S. visa bulletin analysis
+
+### 🎨 Features
+- **Visual Indicators**: Color-coded status display showing the active mode
+- **Session Persistence**: Mode selection persists throughout the chat session
+- **Seamless Switching**: Instant mode changes with agent reconfiguration
+- **Clear Feedback**: Descriptive text explaining each mode's capabilities
+
+### 📍 Location
+The Expert Mode selector is located in the sidebar under the Provider selection, making it easily accessible for quick mode switching during conversations.
 
 ## 🐳 Docker Services
 
