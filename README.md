@@ -62,11 +62,7 @@ ANTHROPIC_API_KEY=your_anthropic_key_here
 
 ### 3. 🚀 Start Application
 ```bash
-# Option 1: Using start script
-python scripts/start.py
-
-# Option 2: Direct docker-compose
-cd docker && docker-compose up --build
+docker-compose up --build
 ```
 
 ### 4. 🤖 (Optional) Setup Ollama for Local Models
@@ -105,44 +101,27 @@ The Expert Mode selector is located in the sidebar under the Provider selection,
 
 ## 🐳 Docker Services
 
-The application runs these containerized services:
+The application follows **microservices architecture** with 4 separate services:
 
-- **🗄️ PostgreSQL Database** - Main data storage (port 5432)
-- **🔄 Redis** - Caching layer (port 6379)
-- **📊 MongoDB** - Document storage (port 27017)
-- **⚡ FastAPI Backend** - REST API with WebSocket support (port 8000)
-- **💻 Streamlit Frontend** - Web UI (port 8501)
+- **⚡ API Service** - FastAPI backend for REST API and WebSocket support (port 8000)
+- **💻 Web Service** - Streamlit frontend for user interface (port 8501)
+- **🗄️ PostgreSQL Database** - Primary data storage with JSONB support (port 5432)  
+- **🔄 Redis Cache** - Caching layer for API performance (port 6379)
 
 ### 🔧 Configuration
 All configuration is handled through environment variables in `.env`:
 
 #### 🤖 LLM Providers
-- **🌐 Google Gemini** (default, free tier)
-- **🔷 OpenAI GPT** (paid)
-- **🟣 Anthropic Claude** (paid)
-- **💻 Ollama** (local installation required)
-  - Install locally: https://ollama.com/download
-  - Pull models: `ollama pull llama3.2`
-  - Runs on localhost:11434, accessible to Docker containers
-
-#### 🗄️ Database
-- **PostgreSQL only** (no SQLite)
-- Automatic schema creation
-- Persistent data volumes
-
-### Configuration
-All configuration is handled through environment variables in `.env`:
-
-#### LLM Providers
 - **Google Gemini** (default, free tier)
 - **OpenAI GPT** (paid)
 - **Anthropic Claude** (paid)
 - **Ollama** (local models via Docker)
 
-#### Database
-- **PostgreSQL** only (no SQLite)
-- Automatic schema creation
-- Persistent data volumes
+#### 🗄️ Database
+- **PostgreSQL** - Primary database for all data storage
+- **JSONB columns** for document-like data when needed
+- **Redis caching** (optional, degrades gracefully)
+- Automatic schema creation and persistent volumes
 
 ## 🧪 Testing
 
@@ -186,30 +165,36 @@ python scripts/test_visa_agent.py # Visa bulletin expertise
 
 ### 📋 Check Service Status
 ```bash
-cd docker && docker-compose ps
+docker-compose ps
 ```
 
 ### 📜 View Logs
 ```bash
-cd docker && docker-compose logs api
-cd docker && docker-compose logs web
+# Application logs (FastAPI + Streamlit)
+docker-compose logs app
+
+# Database logs
+docker-compose logs db
+
+# Cache logs
+docker-compose logs redis
 ```
 
 ### 🔄 Restart Services
 ```bash
-cd docker && docker-compose restart
+docker-compose restart
 ```
 
 ### 🆕 Clean Restart
 ```bash
-cd docker && docker-compose down
-python scripts/start.py
+docker-compose down
+docker-compose up --build
 ```
 
 ### 🏗️ Development
 To make changes and rebuild:
 ```bash
-cd docker && docker-compose up --build
+docker-compose up --build
 ```
 
 ## 📊 Current Status
@@ -230,7 +215,7 @@ cd docker && docker-compose up --build
   - ✅ FastAPI backend with comprehensive REST endpoints
   - ✅ Redis caching for analytics performance
   - ✅ WebSocket support for real-time features
-  - ✅ Multi-database support (PostgreSQL, Redis, MongoDB)
+  - ✅ Streamlined database architecture (PostgreSQL + Redis)
   - ✅ Docker containerization with health checks
 - ✅ **Machine Learning Prediction Models** (NEW)
   - ✅ Random Forest regression for date advancement predictions
@@ -527,8 +512,7 @@ streamlit run src/main.py
 
 **Setup:**
 ```bash
-# 1. Start all services (PostgreSQL, Redis, MongoDB, Streamlit)
-cd docker
+# 1. Start all services (PostgreSQL, Redis, Application)
 docker-compose up -d
 
 # 2. Verify services are running
@@ -538,16 +522,16 @@ docker-compose ps
 **Execute commands:**
 ```bash
 # Collect historical data (uses PostgreSQL)
-docker-compose exec web python scripts/visa_data_manager.py collect --start-year 2020 --end-year 2025
+docker-compose exec api python scripts/visa_data_manager.py collect --start-year 2020 --end-year 2025
 
 # Fetch current bulletin
-docker-compose exec web python scripts/visa_data_manager.py fetch
+docker-compose exec api python scripts/visa_data_manager.py fetch
 
 # Validate and clean data
-docker-compose exec web python scripts/visa_data_manager.py validate --fix-errors
+docker-compose exec api python scripts/visa_data_manager.py validate --fix-errors
 
 # Analyze trends
-docker-compose exec web python scripts/visa_data_manager.py analyze --category EB-2 --country India
+docker-compose exec api python scripts/visa_data_manager.py analyze --category EB-2 --country India
 
 # Web interface automatically available at http://localhost:8501
 ```
@@ -566,8 +550,8 @@ streamlit run src/main.py
 **Docker Mode:**
 ```bash
 # Complete setup and execution
-cd docker && docker-compose up -d
-docker-compose exec web python scripts/visa_data_manager.py collect --start-year 2020 --end-year 2025
+docker-compose up -d
+docker-compose exec api python scripts/visa_data_manager.py collect --start-year 2020 --end-year 2025
 # Access web UI at http://localhost:8501
 ```
 
@@ -608,7 +592,7 @@ Set up cron job for automatic monthly updates:
 **Docker Mode:**
 ```bash
 # Add to crontab (crontab -e)
-0 6 * * * cd /path/to/project/docker && docker-compose exec -T web python scripts/visa_data_manager.py fetch >> /var/log/visa_bulletin.log 2>&1
+0 6 * * * cd /path/to/project && docker-compose exec -T app python scripts/visa_data_manager.py fetch >> /var/log/visa_bulletin.log 2>&1
 ```
 
 ### 📈 **Programmatic Usage**

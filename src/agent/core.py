@@ -2,14 +2,30 @@
 Core AI Agent implementation supporting multiple LLM providers
 """
 import os
+import logging
 from typing import List, Dict, Any, Optional, Union
 from datetime import date
 from visa.models import VisaCategory, CountryCode, VisaBulletin, CategoryData, PredictionResult
 from agent.visa_expertise import VISA_EXPERT_PROMPT, PROMPT_TEMPLATES, get_category_insight, get_country_insight
+from agent.visa_tools import get_visa_analytics_tools
+from agent.data_bridge import get_visa_data_bridge
 from utils.config import get_config
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import PromptTemplate
+
+# Try to import agent components, with fallback
+try:
+    from langchain.agents import create_tool_calling_agent, AgentExecutor
+except ImportError:
+    try:
+        from langchain_community.agents import create_tool_calling_agent, AgentExecutor
+    except ImportError:
+        create_tool_calling_agent = None
+        AgentExecutor = None
+
+logger = logging.getLogger(__name__)
 
 # Import different LLM providers
 try:
@@ -33,7 +49,7 @@ except ImportError:
     ChatOllama = None
 
 class AIAgent:
-    """Main AI Agent class that handles conversation and reasoning"""
+    """Main AI Agent class that handles conversation and reasoning with visa analytics integration"""
     
     def __init__(self, provider: str = "openai", model_name: str = "gpt-4", temperature: float = 0.7, mode: str = "general"):
         """Initialize the AI Agent with specified provider and model"""
@@ -51,13 +67,47 @@ class AIAgent:
         # Initialize conversation memory
         self.memory = ChatMessageHistory()
         
-        # System prompt template
+        # Initialize visa analytics integration first (needed for system prompt)
+        self.data_bridge = get_visa_data_bridge()
+        self.visa_tools = get_visa_analytics_tools() if mode == "visa_expert" else []
+        
+        # System prompt template (after data_bridge is initialized)
         self.system_prompt = self._create_system_prompt()
+        
+        # Initialize agent executor for tool-calling if in visa expert mode
+        self.agent_executor = None
+        if mode == "visa_expert" and self.visa_tools:
+            try:
+                self._initialize_agent_executor()
+                logger.info("Visa analytics tools integrated successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize agent executor: {e}")
+                self.visa_tools = []
         
     def _create_system_prompt(self) -> str:
         """Create the system prompt that defines the agent's behavior"""
         if self.mode == "visa_expert":
-            return VISA_EXPERT_PROMPT
+            # Enhanced system prompt for visa expert mode with tools
+            base_prompt = VISA_EXPERT_PROMPT
+            
+            # Add data availability context
+            data_summary = self.data_bridge.get_data_summary_for_context()
+            
+            enhanced_prompt = f"""{base_prompt}
+
+=== DATA ACCESS CAPABILITIES ===
+{data_summary}
+
+When users ask about visa trends, predictions, or comparisons, I can access real historical data using specialized tools:
+- visa_trend_analysis: For analyzing historical trends of specific categories and countries
+- visa_category_comparison: For comparing categories within a country
+- visa_movement_prediction: For predicting future movements
+- visa_summary_report: For comprehensive market overviews
+
+I will use these tools to provide data-driven responses whenever possible.
+==="""
+            return enhanced_prompt
+        
         return """You are a helpful and intelligent AI assistant. You can:
         - Answer questions and provide information
         - Help with problem-solving and analysis
@@ -103,17 +153,107 @@ class AIAgent:
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
     
+    def _initialize_agent_executor(self):
+        """Initialize the agent executor for tool-calling capabilities"""
+        if not self.visa_tools or create_tool_calling_agent is None or AgentExecutor is None:
+            logger.warning("LangChain agent components not available, using manual tool integration")
+            return
+        
+        # Create a prompt template for the agent
+        prompt = PromptTemplate.from_template("""
+{system_prompt}
+
+You have access to the following tools:
+{tools}
+
+Use the following format:
+
+Question: the input question you must answer
+Thought: you should always think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
+
+Question: {input}
+{agent_scratchpad}""")
+        
+        # Create the agent
+        try:
+            agent = create_tool_calling_agent(
+                llm=self.llm,
+                tools=self.visa_tools,
+                prompt=prompt
+            )
+            
+            # Create the executor
+            self.agent_executor = AgentExecutor(
+                agent=agent,
+                tools=self.visa_tools,
+                verbose=True,
+                handle_parsing_errors=True,
+                max_iterations=3
+            )
+        except Exception as e:
+            logger.error(f"Failed to create agent executor: {e}")
+            # Fallback to simple tool integration
+            self.agent_executor = None
+    
     @staticmethod
     def get_supported_providers():
         """Get list of supported providers"""
         return ["openai", "anthropic", "google", "ollama"]
     
     def chat(self, user_input: str) -> str:
-        """Process user input and return AI response"""
+        """Process user input and return AI response with visa analytics integration"""
         try:
+            # Check for data unavailability scenarios first
+            if self.mode == "visa_expert":
+                unavailable_response = self.data_bridge.handle_data_unavailable_scenario(user_input)
+                if unavailable_response:
+                    self.memory.add_user_message(user_input)
+                    self.memory.add_ai_message(unavailable_response)
+                    return unavailable_response
+            
+            # Use agent executor for visa expert mode with tools
+            if self.mode == "visa_expert" and self.agent_executor:
+                try:
+                    # Try using the agent executor with tools
+                    result = self.agent_executor.invoke({
+                        "input": user_input,
+                        "system_prompt": self.system_prompt
+                    })
+                    
+                    response_content = result.get("output", str(result))
+                    
+                    # Save to memory
+                    self.memory.add_user_message(user_input)
+                    self.memory.add_ai_message(response_content)
+                    
+                    return response_content
+                    
+                except Exception as tool_error:
+                    logger.warning(f"Tool execution failed, falling back to manual tool integration: {tool_error}")
+                    # Fall through to manual tool integration
+            
+            # Manual tool integration for visa expert mode (fallback)
+            if self.mode == "visa_expert" and self.visa_tools:
+                tool_response = self._manual_tool_integration(user_input)
+                if tool_response:
+                    self.memory.add_user_message(user_input)
+                    self.memory.add_ai_message(tool_response)
+                    return tool_response
+            
+            # Regular chat processing with data context injection
+            enhanced_prompt = self.system_prompt
+            if self.mode == "visa_expert":
+                enhanced_prompt = self.data_bridge.inject_data_context(user_input, self.system_prompt)
+            
             # Create message template
             prompt_template = ChatPromptTemplate.from_messages([
-                SystemMessagePromptTemplate.from_template(self.system_prompt),
+                SystemMessagePromptTemplate.from_template(enhanced_prompt),
                 HumanMessagePromptTemplate.from_template("{input}")
             ])
             
@@ -135,7 +275,49 @@ class AIAgent:
             return response.content
             
         except Exception as e:
+            logger.error(f"Error in chat processing: {e}")
             return f"Sorry, I encountered an error: {str(e)}"
+    
+    def _manual_tool_integration(self, user_input: str) -> Optional[str]:
+        """Manual tool integration when agent executor is not available"""
+        try:
+            # Extract context from user query
+            context = self.data_bridge.extract_visa_context(user_input)
+            
+            if not context['is_visa_related']:
+                return None
+            
+            # Determine which tool to use based on query type
+            if context['query_type'] == 'trend_analysis' and context['categories'] and context['countries']:
+                # Use trend analysis tool
+                from agent.visa_tools import VisaTrendAnalysisTool
+                tool = VisaTrendAnalysisTool()
+                return tool._run(context['categories'][0], context['countries'][0])
+            
+            elif context['query_type'] == 'comparison' and context['countries']:
+                # Use category comparison tool
+                from agent.visa_tools import VisaCategoryComparisonTool
+                tool = VisaCategoryComparisonTool()
+                return tool._run(context['countries'][0], context['categories'] if context['categories'] else None)
+            
+            elif context['query_type'] == 'prediction' and context['categories'] and context['countries']:
+                # Use prediction tool
+                from agent.visa_tools import VisaMovementPredictionTool
+                tool = VisaMovementPredictionTool()
+                return tool._run(context['categories'][0], context['countries'][0])
+            
+            elif context['query_type'] == 'summary':
+                # Use summary report tool
+                from agent.visa_tools import VisaSummaryReportTool
+                tool = VisaSummaryReportTool()
+                return tool._run(context['categories'] if context['categories'] else None,
+                               context['countries'] if context['countries'] else None)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error in manual tool integration: {e}")
+            return None
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """Return the conversation history as a list of dictionaries"""

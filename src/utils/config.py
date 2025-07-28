@@ -34,6 +34,7 @@ class Config:
         self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
         self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+        self.DOCKER_MODE = os.getenv("DOCKER_MODE", "false").lower() == "true"
         
         # Server Configuration (Docker internal)
         self.HOST = os.getenv("HOST", "0.0.0.0")
@@ -42,8 +43,9 @@ class Config:
         # API Configuration (Docker service communication)
         self.API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8000")
         
-        # Database Configuration (PostgreSQL only)
+        # Database Configuration (PostgreSQL only in Docker)
         self.DATABASE_TYPE = "postgresql"
+        self.DATABASE_PATH = os.getenv("DATABASE_PATH", "data/app.db")  # Fallback for local development
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
         self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
         self.POSTGRES_DB = os.getenv("POSTGRES_DB", "app_db")
@@ -55,12 +57,6 @@ class Config:
         self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
         
-        # MongoDB Configuration
-        self.MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")
-        self.MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-        self.MONGO_DB = os.getenv("MONGO_DB", "app_db")
-        self.MONGO_USER = os.getenv("MONGO_USER", "admin")
-        self.MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "password")
     
     def validate_config(self, provider: str = None) -> bool:
         """Validate that required configuration is present"""
