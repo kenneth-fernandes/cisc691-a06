@@ -70,14 +70,6 @@ class TestDatabaseDependencies:
             assert psycopg2.__version__ is not None
         except ImportError:
             pytest.fail("psycopg2-binary not available - required for PostgreSQL")
-    
-    def test_mongodb_client_available(self):
-        """Test MongoDB client is available"""
-        try:
-            import pymongo
-            assert pymongo.__version__ is not None
-        except ImportError:
-            pytest.fail("pymongo not available - required for MongoDB")
 
 
 class TestAPIFrameworkDependencies:

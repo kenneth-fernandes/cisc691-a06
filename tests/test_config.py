@@ -17,11 +17,6 @@ def mock_env(monkeypatch):
         "REDIS_HOST": "test-redis",
         "REDIS_PORT": "6380",
         "REDIS_PASSWORD": "test_redis_pass",
-        "MONGO_HOST": "test-mongodb",
-        "MONGO_PORT": "27017",
-        "MONGO_DB": "test_db",
-        "MONGO_USER": "test_user",
-        "MONGO_PASSWORD": "test_pass"
     }
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
@@ -43,14 +38,7 @@ def test_config_loads_redis_settings(mock_env):
     assert config.REDIS_PORT == 6380
     assert config.REDIS_PASSWORD == "test_redis_pass"
 
-def test_config_loads_mongodb_settings(mock_env):
-    """Test MongoDB configuration loading"""
     config = Config()
-    assert config.MONGO_HOST == "test-mongodb"
-    assert config.MONGO_PORT == 27017
-    assert config.MONGO_DB == "test_db"
-    assert config.MONGO_USER == "test_user"
-    assert config.MONGO_PASSWORD == "test_pass"
 
 def test_docker_mode_configuration(mock_env):
     """Test Docker-only configuration (no DOCKER_MODE attribute needed)"""
