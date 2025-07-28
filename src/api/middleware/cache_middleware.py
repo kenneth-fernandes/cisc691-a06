@@ -30,7 +30,7 @@ class CacheMiddleware:
         self.cache_post_requests = cache_post_requests
         self.exclude_paths = exclude_paths or [
             "/docs", "/redoc", "/openapi.json",
-            "/health", "/cache/", "/websocket"
+            "/health", "/cache/"
         ]
     
     async def __call__(self, scope, receive, send):
