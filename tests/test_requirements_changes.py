@@ -1,41 +1,7 @@
 """
-Tests for requirements changes and WebSocket dependencies
+Tests for requirements changes and dependencies
 """
 import pytest
-
-
-class TestWebSocketDependencies:
-    """Test WebSocket related dependencies are available"""
-    
-    def test_websockets_library_available(self):
-        """Test that websockets library is available"""
-        try:
-            import websockets
-            assert websockets.__version__ is not None
-        except ImportError:
-            pytest.skip("websockets library not available - install with 'pip install websockets'")
-    
-    def test_uvicorn_standard_available(self):
-        """Test that uvicorn with standard dependencies is available"""
-        try:
-            import uvicorn
-            # Check if uvicorn has WebSocket support
-            assert hasattr(uvicorn, 'run')
-            # Try to import WebSocket related modules that come with uvicorn[standard]
-            import websockets  # Should be available with uvicorn[standard]
-            assert websockets is not None
-        except ImportError:
-            pytest.skip("uvicorn[standard] not properly installed - install with 'pip install uvicorn[standard]'")
-    
-    def test_fastapi_websocket_support(self):
-        """Test that FastAPI WebSocket support is available"""
-        try:
-            from fastapi import WebSocket
-            from fastapi.websockets import WebSocketState
-            assert WebSocket is not None
-            assert WebSocketState is not None
-        except ImportError:
-            pytest.fail("FastAPI WebSocket support not available")
 
 
 class TestRedisClientDependencies:
@@ -119,7 +85,7 @@ class TestTestingDependencies:
             import pytest_asyncio
             assert pytest_asyncio is not None
         except ImportError:
-            pytest.fail("pytest-asyncio not available - required for WebSocket testing")
+            pytest.fail("pytest-asyncio not available - required for async testing")
     
     def test_httpx_available(self):
         """Test httpx is available for HTTP testing"""

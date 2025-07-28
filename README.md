@@ -37,7 +37,7 @@ Containerized AI agent with REST API backend for US visa bulletin analysis and m
   - 🐳 Full Docker containerization
   - ⚡ REST API with FastAPI backend
   - 🔄 Redis caching for performance
-  - 🔌 WebSocket support for real-time features
+  - 📡 HTTP API for reliable communication
 
 ## 🚀 Quick Start
 
@@ -80,7 +80,7 @@ curl http://localhost:11434/api/tags
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 - **Cache Stats**: http://localhost:8000/api/analytics/cache/stats
-- **WebSocket Stats**: http://localhost:8000/api/websocket/stats
+- **Health Check**: http://localhost:8000/health
 
 ## 🎯 Expert Mode Feature
 
@@ -103,7 +103,7 @@ The Expert Mode selector is located in the sidebar under the Provider selection,
 
 The application follows **microservices architecture** with 4 separate services:
 
-- **⚡ API Service** - FastAPI backend for REST API and WebSocket support (port 8000)
+- **⚡ API Service** - FastAPI backend for REST API (port 8000)
 - **💻 Web Service** - Streamlit frontend for user interface (port 8501)
 - **🗄️ PostgreSQL Database** - Primary data storage with JSONB support (port 5432)  
 - **🔄 Redis Cache** - Caching layer for API performance (port 6379)
@@ -134,7 +134,7 @@ pytest tests/ -v
 # Run specific test categories
 pytest tests/test_api_* -v        # API tests
 pytest tests/test_*_caching.py -v # Caching tests
-pytest tests/test_*_websocket.py -v # WebSocket tests
+pytest tests/test_*_integration.py -v # Integration tests
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=html
@@ -145,7 +145,7 @@ pytest tests/ --cov=src --cov-report=html
 - **🔗 Integration Tests**: End-to-end workflow testing
 - **⚡ API Tests**: REST API endpoint testing
 - **🔄 Cache Tests**: Redis caching functionality
-- **🔌 WebSocket Tests**: Real-time communication testing
+- **🔗 HTTP API Tests**: REST API communication testing
 
 ### Coverage
 Current test coverage: **90%+** for visa parsing system components
@@ -214,7 +214,7 @@ docker-compose up --build
 - ✅ **API-first architecture** (NEW)
   - ✅ FastAPI backend with comprehensive REST endpoints
   - ✅ Redis caching for analytics performance
-  - ✅ WebSocket support for real-time features
+  - ✅ HTTP API for reliable communication
   - ✅ Streamlined database architecture (PostgreSQL + Redis)
   - ✅ Docker containerization with health checks
 - ✅ **Machine Learning Prediction Models** (NEW)
