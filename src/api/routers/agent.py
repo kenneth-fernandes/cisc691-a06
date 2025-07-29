@@ -49,7 +49,9 @@ async def chat_with_agent(request: ChatRequest):
         return ChatResponse(
             response=response_text,
             session_id=request.session_id,
-            conversation_history=history[-10:]  # Last 10 messages
+            conversation_history=history[-10:],  # Last 10 messages
+            provider=agent.provider,
+            mode=agent.mode
         )
         
     except Exception as e:

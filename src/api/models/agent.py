@@ -26,6 +26,8 @@ class ChatResponse(BaseModel):
     response: str = Field(..., description="Agent response")
     session_id: str = Field(..., description="Session ID")
     conversation_history: List[ConversationMessage] = Field(default_factory=list, description="Recent conversation history")
+    provider: Optional[str] = Field(None, description="LLM provider used for this response")
+    mode: Optional[str] = Field(None, description="Agent mode used for this response")
 
 class ConversationHistory(BaseModel):
     """Conversation history model"""

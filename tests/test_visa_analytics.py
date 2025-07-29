@@ -32,7 +32,7 @@ class TestTrendAnalyzer:
             
             cat_data = Mock(spec=CategoryData)
             cat_data.final_action_date = priority_date
-            cat_data.status = BulletinStatus.DATE_SPECIFIED.value
+            cat_data.status = BulletinStatus.DATE_SPECIFIED
             history.append(cat_data)
             
         return history
@@ -364,7 +364,7 @@ class TestTrendAnalyzerIntegration:
             
             cat_data = Mock(spec=CategoryData)
             cat_data.final_action_date = priority_date
-            cat_data.status = BulletinStatus.DATE_SPECIFIED.value
+            cat_data.status = BulletinStatus.DATE_SPECIFIED
             history.append(cat_data)
         
         repository.get_category_history.return_value = history

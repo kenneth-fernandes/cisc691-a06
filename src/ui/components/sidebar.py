@@ -67,7 +67,7 @@ def render_sidebar():
                 config = {
                     "agent_type": "default",
                     "provider": selected_provider,
-                    "mode": "general",
+                    "mode": st.session_state.get('expert_mode', 'General').lower().replace(' ', '_'),
                 }
                 api_client.update_agent_config(st.session_state.session_id, config)
 
@@ -118,32 +118,107 @@ def render_sidebar():
         # Update expert mode if changed
         if selected_mode != st.session_state.expert_mode:
             st.session_state.expert_mode = selected_mode
+            
+            # Update appropriate session ID based on mode
+            if selected_mode == "Visa Expert":
+                st.session_state.session_id = st.session_state.get('visa_session_id', str(__import__('uuid').uuid4()))
+            else:
+                st.session_state.session_id = st.session_state.get('general_session_id', str(__import__('uuid').uuid4()))
+            
             # Update agent config via API
-            if "session_id" in st.session_state:
-                mode = "visa_expert" if selected_mode == "Visa Expert" else "general"
-                config = {
-                    "agent_type": (
-                        "visa_expert" if selected_mode == "Visa Expert" else "default"
-                    ),
-                    "provider": st.session_state.current_provider,
-                    "mode": mode,
-                }
-                api_client.update_agent_config(st.session_state.session_id, config)
+            mode = "visa_expert" if selected_mode == "Visa Expert" else "general"
+            config = {
+                "agent_type": "default",  # Always use default agent type
+                "provider": st.session_state.current_provider,
+                "mode": mode,
+            }
+            api_client.update_agent_config(st.session_state.session_id, config)
+            
+            # Show transition feedback
+            transition_icon = "🎯" if selected_mode == "Visa Expert" else "🤖"
+            st.success(f"{transition_icon} Switched to {selected_mode} mode!")
 
         st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
+        
+        # Visa Expert Quick Actions
+        if st.session_state.get('expert_mode') == 'Visa Expert':
+            st.markdown(
+                "<p style='margin-bottom: 0.5rem; font-weight: 600;'>🚀 Quick Actions</p>",
+                unsafe_allow_html=True,
+            )
+            
+            quick_actions = [
+                "📈 Show EB-2 India trends",
+                "🔮 Predict EB-3 China movement", 
+                "🌍 Compare all EB categories",
+                "📅 Latest bulletin summary"
+            ]
+            
+            selected_action = st.selectbox(
+                "Choose a quick action:",
+                ["👆 Select an action..."] + quick_actions,
+                label_visibility="collapsed"
+            )
+            
+            if selected_action != "👆 Select an action...":
+                # Map actions to queries
+                action_queries = {
+                    "📈 Show EB-2 India trends": "Show me the historical trends for EB-2 India category over the past 2 years",
+                    "🔮 Predict EB-3 China movement": "Predict the movement for EB-3 China category for the next 3 months",
+                    "🌍 Compare all EB categories": "Compare all Employment-Based categories for India and show which is moving faster",
+                    "📅 Latest bulletin summary": "Give me a summary of the latest visa bulletin with key highlights"
+                }
+                
+                if st.button("▶️ Execute Action", use_container_width=True):
+                    # Add the query to chat input (we'll handle this in the main chat)
+                    st.session_state.quick_action_query = action_queries[selected_action]
+                    st.rerun()
+            
+            st.markdown("<div style='margin: 1rem 0;'></div>", unsafe_allow_html=True)
 
-        # Clear chat button
-        _, col2, _ = st.columns([1, 2, 1])
-        with col2:
-            if st.button("🗑️ Clear Chat", use_container_width=True):
-                if "messages" in st.session_state:
-                    st.session_state.messages = []
-                # Clear chat history via API by creating new session
-                if "session_id" in st.session_state:
-                    import uuid
-
-                    st.session_state.session_id = str(uuid.uuid4())
-                st.rerun()
+        # Clear chat buttons
+        current_mode = st.session_state.get('expert_mode', 'General')
+        
+        # Clear current mode chat
+        if st.button(f"🗑️ Clear {current_mode} Chat", use_container_width=True):
+            if "messages" in st.session_state:
+                st.session_state.messages = []
+            
+            # Clear appropriate message history
+            if current_mode == "Visa Expert":
+                st.session_state.visa_messages = []
+                import uuid
+                st.session_state.visa_session_id = str(uuid.uuid4())
+                st.session_state.session_id = st.session_state.visa_session_id
+            else:
+                st.session_state.general_messages = []
+                import uuid
+                st.session_state.general_session_id = str(uuid.uuid4())
+                st.session_state.session_id = st.session_state.general_session_id
+            
+            st.success(f"✅ {current_mode} chat cleared!")
+            st.rerun()
+        
+        # Clear all chats button
+        if st.button("🗑️ Clear All Chats", use_container_width=True, help="Clear both General and Visa Expert chat histories"):
+            # Clear all message histories
+            st.session_state.messages = []
+            st.session_state.visa_messages = []
+            st.session_state.general_messages = []
+            
+            # Generate new session IDs
+            import uuid
+            st.session_state.visa_session_id = str(uuid.uuid4())
+            st.session_state.general_session_id = str(uuid.uuid4())
+            
+            # Set current session ID based on mode
+            if current_mode == "Visa Expert":
+                st.session_state.session_id = st.session_state.visa_session_id
+            else:
+                st.session_state.session_id = st.session_state.general_session_id
+            
+            st.success("✅ All chats cleared!")
+            st.rerun()
 
         st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
 
