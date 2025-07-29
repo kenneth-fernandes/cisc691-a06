@@ -620,6 +620,55 @@ analyzer = TrendAnalyzer()
 trends = analyzer.calculate_advancement_trends(VisaCategory.EB2, CountryCode.INDIA)
 ```
 
+## 📊 System Architecture & Workflow Diagrams
+
+For detailed technical architecture, workflow diagrams, and system design documentation, see:
+**[📋 Workflow Diagrams Documentation](docs/workflow-diagrams.md)**
+
+### 🎯 Quick Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        UI[Streamlit UI]
+        CHAT[Chat Interface]
+        ANALYTICS[Analytics Dashboard]
+    end
+    
+    subgraph "Backend"
+        API[FastAPI Backend]
+        AGENT[AI Agent Core]
+        TOOLS[Visa Analytics Tools]
+    end
+    
+    subgraph "Data"
+        DB[(PostgreSQL/SQLite)]
+        CACHE[(Redis Cache)]
+    end
+    
+    UI --> API
+    API --> AGENT
+    AGENT --> TOOLS
+    TOOLS --> DB
+    API --> CACHE
+    
+    classDef frontend fill:#e1f5fe
+    classDef backend fill:#e8f5e8
+    classDef data fill:#fff3e0
+    
+    class UI,CHAT,ANALYTICS frontend
+    class API,AGENT,TOOLS backend
+    class DB,CACHE data
+```
+
+**Includes:**
+- 🏗️ Complete system architecture diagrams
+- 🤖 AI agent decision-making flowcharts  
+- 🔄 Data flow sequence diagrams
+- 👤 User interaction journey maps
+- 🗄️ Database schema visualizations
+- 📁 File structure documentation
+
 ## 📝 Assignment Information
 
 This project was developed as part of the CISC 691 - Foundations of Next-Gen AI course assignment (A06: Building the AI Agent of Your Choice).
