@@ -73,84 +73,12 @@ jobs:
       with:
         script: |
           const fs = require('fs');
-          const { execSync } = require('child_process');
           
           // Read coverage data
           const coverage = JSON.parse(fs.readFileSync('coverage.json', 'utf8'));
           const totalCoverage = Math.round(coverage.totals.percent_covered);
           
-          // Fetch the base branch and get PR diff to find new/modified lines
-          try {
-            execSync(`git fetch origin ${context.payload.pull_request.base.ref}:${context.payload.pull_request.base.ref}`);
-          } catch (e) {
-            console.log('Branch may already exist, continuing...');
-          }
-          
-          const diff = execSync(`git diff ${context.payload.pull_request.base.sha}...${context.payload.pull_request.head.sha} --unified=0`).toString();
-          
-          // Parse diff to extract new lines by file
-          const newLines = {};
-          let currentFile = null;
-          
-          diff.split('\n').forEach(line => {
-            if (line.startsWith('+++')) {
-              const match = line.match(/\+\+\+ b\/(.+)/);
-              if (match) currentFile = match[1];
-            } else if (line.startsWith('@@') && currentFile) {
-              const match = line.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
-              if (match) {
-                const startLine = parseInt(match[1]);
-                const lineCount = parseInt(match[2] || '1');
-                if (!newLines[currentFile]) newLines[currentFile] = [];
-                for (let i = 0; i < lineCount; i++) {
-                  newLines[currentFile].push(startLine + i);
-                }
-              }
-            }
-          });
-          
-          // Calculate coverage for new lines only
-          let newCodeCovered = 0;
-          let newCodeTotal = 0;
-          const newFileDetails = [];
-          
-          Object.entries(newLines).forEach(([file, lines]) => {
-            if (coverage.files[file]) {
-              const fileData = coverage.files[file];
-              let fileCovered = 0;
-              let fileTotal = 0;
-              
-              lines.forEach(lineNum => {
-                if (fileData.executed_lines.includes(lineNum)) {
-                  fileCovered++;
-                  newCodeCovered++;
-                } else if (fileData.missing_lines.includes(lineNum)) {
-                  // Line is executable but not covered
-                  fileTotal++;
-                  newCodeTotal++;
-                } else if (fileData.executed_lines.includes(lineNum) || 
-                          Object.keys(fileData.summary).length > 0) {
-                  // Line is covered
-                  fileCovered++;
-                  newCodeCovered++;
-                }
-                fileTotal++;
-                newCodeTotal++;
-              });
-              
-              if (fileTotal > 0) {
-                newFileDetails.push({
-                  file: file.replace('src/', ''),
-                  coverage: Math.round((fileCovered / fileTotal) * 100),
-                  lines: fileTotal
-                });
-              }
-            }
-          });
-          
-          const newCodeCoverage = newCodeTotal > 0 ? Math.round((newCodeCovered / newCodeTotal) * 100) : 100;
-          
-          // Determine emoji and status for overall coverage
+          // Determine emoji and status based on coverage
           let emoji = '🔴';
           let status = 'needs improvement';
           if (totalCoverage >= 80) {
@@ -161,56 +89,25 @@ jobs:
             status = 'good';
           }
           
-          // Determine emoji for new code coverage
-          let newCodeEmoji = '🔴';
-          let newCodeStatus = 'needs improvement';
-          if (newCodeCoverage >= 80) {
-            newCodeEmoji = '🟢';
-            newCodeStatus = 'excellent';
-          } else if (newCodeCoverage >= 60) {
-            newCodeEmoji = '🟡';
-            newCodeStatus = 'good';
-          }
-          
-          // Get detailed coverage by file (overall)
+          // Get detailed coverage by file
           const fileDetails = Object.entries(coverage.files)
             .map(([file, data]) => ({
               file: file.replace('src/', ''),
               coverage: Math.round(data.summary.percent_covered)
             }))
             .sort((a, b) => a.coverage - b.coverage)
-            .slice(0, 10);
+            .slice(0, 10); // Show worst 10 files
           
           const detailsTable = fileDetails
             .map(({file, coverage}) => `| ${file} | ${coverage}% |`)
             .join('\n');
           
-          // New code details table
-          const newCodeTable = newFileDetails.length > 0 ? 
-            newFileDetails
-              .sort((a, b) => a.coverage - b.coverage)
-              .map(({file, coverage, lines}) => `| ${file} | ${coverage}% | ${lines} lines |`)
-              .join('\n') : 
-            '| No new executable code detected | - | - |';
-          
           const comment = `## ${emoji} Test Coverage Report
           
-          **Overall Coverage: ${totalCoverage}% (${status})**  
-          **New Code Coverage: ${newCodeEmoji} ${newCodeCoverage}% (${newCodeStatus})**
-          
-          ${newCodeTotal > 0 ? `📝 **${newCodeTotal} new/modified lines** analyzed` : '📝 **No new executable lines** detected'}
+          **Overall Coverage: ${totalCoverage}% (${status})**
           
           <details>
-          <summary>🆕 New Code Coverage by File</summary>
-          
-          | File | Coverage | Lines |
-          |------|----------|-------|
-          ${newCodeTable}
-          
-          </details>
-          
-          <details>
-          <summary>📊 Overall Coverage by File (lowest coverage first)</summary>
+          <summary>📊 Coverage by File (lowest coverage first)</summary>
           
           | File | Coverage |
           |------|----------|
@@ -218,8 +115,7 @@ jobs:
           
           </details>
           
-          > **Coverage targets:** 80% for excellent, 60% for good  
-          > **Tip:** Focus on improving coverage for new code to maintain quality
+          > Coverage target: 80% for excellent, 60% for good
           `;
           
           github.rest.issues.createComment({
