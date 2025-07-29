@@ -79,8 +79,14 @@ jobs:
           const coverage = JSON.parse(fs.readFileSync('coverage.json', 'utf8'));
           const totalCoverage = Math.round(coverage.totals.percent_covered);
           
-          // Get PR diff to find new/modified lines
-          const diff = execSync(`git diff origin/${context.payload.pull_request.base.ref}...HEAD --unified=0`).toString();
+          // Fetch the base branch and get PR diff to find new/modified lines
+          try {
+            execSync(`git fetch origin ${context.payload.pull_request.base.ref}:${context.payload.pull_request.base.ref}`);
+          } catch (e) {
+            console.log('Branch may already exist, continuing...');
+          }
+          
+          const diff = execSync(`git diff ${context.payload.pull_request.base.sha}...${context.payload.pull_request.head.sha} --unified=0`).toString();
           
           // Parse diff to extract new lines by file
           const newLines = {};
