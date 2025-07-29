@@ -1,7 +1,7 @@
 # 🤖 Visa Bulletin AI Agent
 
 ![CI](https://github.com/kenneth-fernandes/cisc691-a06/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-36%25-red)
+![Coverage](https://img.shields.io/badge/coverage-35%25-red)
 
 Containerized AI agent with REST API backend for US visa bulletin analysis and multi-provider LLM chat.
 
