@@ -68,12 +68,12 @@ graph TB
     PARSER --> MODELS
     VALIDATOR --> MODELS
     
-    %% Styling
-    classDef frontend fill:#e1f5fe
-    classDef api fill:#f3e5f5
-    classDef agent fill:#e8f5e8
-    classDef data fill:#fff3e0
-    classDef external fill:#ffebee
+    %% Styling with high contrast colors
+    classDef frontend fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#ffffff
+    classDef api fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#ffffff
+    classDef agent fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#ffffff
+    classDef data fill:#7b1fa2,stroke:#4a148c,stroke-width:2px,color:#ffffff
+    classDef external fill:#d32f2f,stroke:#b71c1c,stroke-width:2px,color:#ffffff
     
     class UI,CHAT,ANALYTICS,SIDEBAR frontend
     class API,AGENT_ROUTER,ANALYTICS_ROUTER,AUTH_ROUTER,CACHE api
@@ -260,6 +260,19 @@ graph LR
     DOCKER --> FA
     DOCKER --> PG
     NGINX --> DOCKER
+    
+    %% Styling with vibrant contrasting colors
+    classDef frontend fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef backend fill:#c62828,stroke:#b71c1c,stroke-width:3px,color:#ffffff
+    classDef aiml fill:#1565c0,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef database fill:#6a1b9a,stroke:#4a148c,stroke-width:3px,color:#ffffff
+    classDef infrastructure fill:#ef6c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    
+    class ST,HTML frontend
+    class FA,UV backend
+    class LC,OPENAI,ANTHROPIC,GOOGLE,OLLAMA aiml
+    class PG,SL,CACHE database
+    class DOCKER,NGINX infrastructure
 ```
 
 ## Database Schema Visualization
@@ -383,6 +396,155 @@ cisc691-a06/
 ├── data/                     # Application data
 ├── docker/                   # Docker configuration
 └── scripts/                  # Utility scripts
+```
+
+## Docker Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Host Machine"
+        subgraph "Docker Compose Environment"
+            subgraph "Web Service Container"
+                WEB[Streamlit Frontend<br/>Port: 8501<br/>Dockerfile.web]
+                WEB_HEALTH[Health Check<br/>/_stcore/health]
+            end
+            
+            subgraph "API Service Container"
+                API[FastAPI Backend<br/>Port: 8000<br/>Dockerfile.api]
+                API_HEALTH[Health Check<br/>/health]
+                UVICORN[Uvicorn ASGI Server]
+            end
+            
+            subgraph "Database Container"
+                POSTGRES[PostgreSQL 15 Alpine<br/>Port: 5432<br/>Database: visa_app]
+                PG_HEALTH[Health Check<br/>pg_isready]
+                PG_DATA[(Persistent Volume<br/>postgres_data)]
+            end
+            
+            subgraph "Cache Container"
+                REDIS[Redis 7.0 Alpine<br/>Port: 6379<br/>Password Protected]
+                REDIS_HEALTH[Health Check<br/>redis-cli ping]
+                REDIS_DATA[(Persistent Volume<br/>redis_data)]
+            end
+        end
+        
+        subgraph "External Access"
+            USER[Users]
+            API_CLIENT[API Clients]
+        end
+        
+        subgraph "Host Volumes"
+            CODE_MOUNT[Code Mount<br/>.:/app]
+            INIT_SQL[Init Script<br/>./init/init.sql]
+        end
+    end
+    
+    %% External connections
+    USER -->|HTTP:8501| WEB
+    API_CLIENT -->|HTTP:8000| API
+    
+    %% Internal service dependencies
+    WEB -->|API Calls| API
+    API -->|Database Queries| POSTGRES
+    API -->|Cache Operations| REDIS
+    
+    %% Health checks
+    WEB -.->|Monitor| WEB_HEALTH
+    API -.->|Monitor| API_HEALTH
+    POSTGRES -.->|Monitor| PG_HEALTH
+    REDIS -.->|Monitor| REDIS_HEALTH
+    
+    %% Volume mounts
+    CODE_MOUNT -.->|Mount| WEB
+    CODE_MOUNT -.->|Mount| API
+    INIT_SQL -.->|Initialize| POSTGRES
+    PG_DATA -.->|Persist| POSTGRES
+    REDIS_DATA -.->|Persist| REDIS
+    
+    %% Startup dependencies
+    API -.->|depends_on| POSTGRES
+    API -.->|depends_on| REDIS
+    WEB -.->|depends_on| API
+    
+    %% Styling with distinct colors
+    classDef web fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef api fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef database fill:#7b1fa2,stroke:#4a148c,stroke-width:3px,color:#ffffff  
+    classDef cache fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
+    classDef external fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    classDef volume fill:#607d8b,stroke:#455a64,stroke-width:2px,color:#ffffff
+    classDef health fill:#4caf50,stroke:#2e7d32,stroke-width:1px,color:#ffffff
+    
+    class WEB web
+    class API,UVICORN api
+    class POSTGRES database
+    class REDIS cache
+    class USER,API_CLIENT external
+    class CODE_MOUNT,INIT_SQL,PG_DATA,REDIS_DATA volume
+    class WEB_HEALTH,API_HEALTH,PG_HEALTH,REDIS_HEALTH health
+```
+
+## Container Communication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Web as Streamlit Web (8501)
+    participant API as FastAPI API (8000)
+    participant Redis as Redis Cache (6379)
+    participant DB as PostgreSQL (5432)
+    
+    Note over User,DB: Docker Compose Container Network
+    
+    User->>Web: HTTP Request (localhost:8501)
+    Web->>API: Internal API Call (api:8000)
+    
+    alt Cache Hit
+        API->>Redis: Check cache
+        Redis-->>API: Return cached data
+    else Cache Miss
+        API->>DB: Query database
+        DB-->>API: Return data
+        API->>Redis: Store in cache
+    end
+    
+    API-->>Web: JSON response
+    Web-->>User: Rendered page
+    
+    Note over Web,DB: Health checks run every 30s
+    Web->>Web: /_stcore/health
+    API->>API: /health
+    Redis->>Redis: redis-cli ping
+    DB->>DB: pg_isready
+```
+
+## Docker Service Configuration
+
+| Service | Image | Port | Dependencies | Health Check | Volumes |
+|---------|-------|------|--------------|--------------|---------|
+| **web** | Custom (Dockerfile.web) | 8501 | api | /_stcore/health | Code mount |
+| **api** | Custom (Dockerfile.api) | 8000 | db, redis | /health | Code mount |
+| **db** | postgres:15-alpine | 5432 | - | pg_isready | postgres_data, init.sql |
+| **redis** | redis:7.0-alpine | 6379 | - | redis-cli ping | redis_data |
+
+## Environment Variables
+
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://admin:password@db:5432/visa_app
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=password
+POSTGRES_DB=visa_app
+
+# Redis Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=redis_password
+
+# Application Configuration
+DOCKER_MODE=true
+PYTHONPATH=/app/src
+API_BASE_URL=http://api:8000
 ```
 
 ---
