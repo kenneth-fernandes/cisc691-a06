@@ -14,17 +14,23 @@ class APIClient:
         self.config = get_config()
         self.base_url = self.config.API_BASE_URL
         self.timeout = 30
+        self.ollama_timeout = 120  # Longer timeout for Ollama
     
     def _make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> Dict:
         """Make HTTP request to API with error handling"""
         url = f"{self.base_url}{endpoint}"
         headers = {"Content-Type": "application/json"}
         
+        # Use longer timeout for Ollama provider
+        timeout = self.timeout
+        if data and isinstance(data, dict) and data.get("config", {}).get("provider") == "ollama":
+            timeout = self.ollama_timeout
+        
         try:
             if method.upper() == "GET":
-                response = requests.get(url, headers=headers, params=params, timeout=self.timeout)
+                response = requests.get(url, headers=headers, params=params, timeout=timeout)
             elif method.upper() == "POST":
-                response = requests.post(url, headers=headers, json=data, timeout=self.timeout)
+                response = requests.post(url, headers=headers, json=data, timeout=timeout)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
@@ -47,8 +53,13 @@ class APIClient:
                 """)
             return {"error": "Connection failed"}
         except requests.exceptions.Timeout:
-            st.error("⏰ Request timed out. The API server might be overloaded.")
-            st.info("💡 **Try**: Wait a moment and send your message again, or switch to a different provider.")
+            provider = data.get("config", {}).get("provider", "unknown") if data else "unknown"
+            if provider == "ollama":
+                st.error("⏰ Ollama request timed out (2 minutes). The model might be processing a complex request.")
+                st.info("💡 **Try**: Simplifying your question, or switching to a faster provider like Google or OpenAI.")
+            else:
+                st.error("⏰ Request timed out. The API server might be overloaded.")
+                st.info("💡 **Try**: Wait a moment and send your message again, or switch to a different provider.")
             return {"error": "Request timeout"}
         except requests.exceptions.HTTPError as e:
             status_code = e.response.status_code

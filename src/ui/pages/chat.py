@@ -31,17 +31,19 @@ def init_session_state():
     if "last_expert_mode" not in st.session_state:
         st.session_state.last_expert_mode = "General"
 
-def display_chat_message(role, content, time_taken=None, mode_indicator=None):
-    """Display a chat message with optional timing and mode indicator"""
+def display_chat_message(role, content, time_taken=None, mode_indicator=None, provider=None):
+    """Display a chat message with optional timing, mode, and provider indicator"""
     with st.chat_message(role):
         st.write(content)
         
-        # Display metadata (time and mode)
+        # Display metadata (time, mode, and provider)
         metadata_parts = []
         if time_taken:
             metadata_parts.append(f"⏱️ Response time: {time_taken:.2f}s")
         if mode_indicator and role == "assistant":
             metadata_parts.append(f"🎯 Mode: {mode_indicator}")
+        if provider and role == "assistant":
+            metadata_parts.append(f"🤖 Provider: {provider}")
         
         if metadata_parts:
             st.caption(" | ".join(metadata_parts))
@@ -164,7 +166,8 @@ def render_chat_page():
                     message["role"],
                     message["content"],
                     message.get("time_taken"),
-                    message.get("mode")
+                    message.get("mode"),
+                    message.get("provider")
                 )
         
         # Display new user message
@@ -189,6 +192,7 @@ def render_chat_page():
                 }
                 
                 # Call API with enhanced error handling
+                provider_info = "Unknown"  # Default provider
                 try:
                     api_response = st.session_state.api_client.chat_with_agent(
                         message=prompt,
@@ -207,6 +211,7 @@ def render_chat_page():
                             response = f"❌ **Error**: {error_msg}"
                     else:
                         response = api_response.get("response", "No response received")
+                        provider_info = api_response.get("provider", "Unknown")
                         
                         # Add helpful context for visa responses
                         if current_mode == "Visa Expert" and response and len(response) > 100:
@@ -222,12 +227,13 @@ def render_chat_page():
                     else:
                         response = f"❌ **Service Error**: {str(e)}"
         
-        # Add AI response to state with mode indicator
+        # Add AI response to state with mode and provider indicator
         st.session_state.messages.append({
             "role": "assistant",
             "content": response,
             "time_taken": time_taken,
-            "mode": current_mode
+            "mode": current_mode,
+            "provider": provider_info
         })
         
         # Reset processing state
@@ -243,7 +249,8 @@ def render_chat_page():
                     message["role"],
                     message["content"],
                     message.get("time_taken"),
-                    message.get("mode")
+                    message.get("mode"),
+                    message.get("provider")
                 )
     
     # Display mode-specific welcome message for empty chat

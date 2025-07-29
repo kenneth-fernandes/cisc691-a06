@@ -7,7 +7,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
 import logging
 
-from .models import VisaBulletin, CategoryData, VisaCategory, CountryCode
+from .models import VisaBulletin, CategoryData, VisaCategory, CountryCode, BulletinStatus
 from .repository import VisaBulletinRepository
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class TrendAnalyzer:
             curr_data = history[i]
             
             if (prev_data.final_action_date and curr_data.final_action_date and 
-                prev_data.status == 'DATE' and curr_data.status == 'DATE'):
+                prev_data.status == BulletinStatus.DATE_SPECIFIED and curr_data.status == BulletinStatus.DATE_SPECIFIED):
                 
                 days_advancement = (curr_data.final_action_date - prev_data.final_action_date).days
                 advancements.append(days_advancement)

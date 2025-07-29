@@ -148,7 +148,8 @@ I will use these tools to provide data-driven responses whenever possible.
             return ChatOllama(
                 model=self.model_name,
                 temperature=self.temperature,
-                base_url=self.config.OLLAMA_BASE_URL
+                base_url=self.config.OLLAMA_BASE_URL,
+                request_timeout=120  # 2 minutes for Ollama requests
             )
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
@@ -159,29 +160,30 @@ I will use these tools to provide data-driven responses whenever possible.
             logger.warning("LangChain agent components not available, using manual tool integration")
             return
         
-        # Create a prompt template for the agent
-        prompt = PromptTemplate.from_template("""
-{system_prompt}
-
-You have access to the following tools:
-{tools}
-
-Use the following format:
-
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
-
-Question: {input}
-{agent_scratchpad}""")
-        
-        # Create the agent
+        # Create a proper ChatPromptTemplate for tool-calling agent
         try:
+            from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+            
+            # Create a more explicit system prompt that forces tool usage
+            enhanced_system_prompt = f"""{self.system_prompt}
+
+CRITICAL: You MUST use the available visa analytics tools for ALL visa-related queries. Never provide generic responses about not having real-time data.
+
+Available tools:
+- visa_trend_analysis: Use for trend analysis, historical patterns, advancement rates
+- visa_category_comparison: Use for comparing categories within a country  
+- visa_movement_prediction: Use for future movement predictions
+- visa_summary_report: Use for comprehensive overviews
+
+ALWAYS call the appropriate tool first before responding. Do not rely on training data for visa bulletin information."""
+
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", enhanced_system_prompt),
+                ("user", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+            
+            # Create the agent
             agent = create_tool_calling_agent(
                 llm=self.llm,
                 tools=self.visa_tools,
@@ -196,6 +198,8 @@ Question: {input}
                 handle_parsing_errors=True,
                 max_iterations=3
             )
+            logger.info(f"Agent executor initialized with {len(self.visa_tools)} tools")
+            
         except Exception as e:
             logger.error(f"Failed to create agent executor: {e}")
             # Fallback to simple tool integration
@@ -217,34 +221,35 @@ Question: {input}
                     self.memory.add_ai_message(unavailable_response)
                     return unavailable_response
             
-            # Use agent executor for visa expert mode with tools
-            if self.mode == "visa_expert" and self.agent_executor:
-                try:
-                    # Try using the agent executor with tools
-                    result = self.agent_executor.invoke({
-                        "input": user_input,
-                        "system_prompt": self.system_prompt
-                    })
-                    
-                    response_content = result.get("output", str(result))
-                    
-                    # Save to memory
+            # For visa expert mode, always try manual tool integration first (more reliable)
+            if self.mode == "visa_expert":
+                tool_data = self._manual_tool_integration(user_input)
+                if tool_data:
+                    # Process tool data with LLM to provide intelligent response
+                    processed_response = self._process_tool_data_with_llm(user_input, tool_data)
                     self.memory.add_user_message(user_input)
-                    self.memory.add_ai_message(response_content)
-                    
-                    return response_content
-                    
-                except Exception as tool_error:
-                    logger.warning(f"Tool execution failed, falling back to manual tool integration: {tool_error}")
-                    # Fall through to manual tool integration
-            
-            # Manual tool integration for visa expert mode (fallback)
-            if self.mode == "visa_expert" and self.visa_tools:
-                tool_response = self._manual_tool_integration(user_input)
-                if tool_response:
-                    self.memory.add_user_message(user_input)
-                    self.memory.add_ai_message(tool_response)
-                    return tool_response
+                    self.memory.add_ai_message(processed_response)
+                    return processed_response
+                
+                # If manual tools didn't work, try agent executor
+                if self.agent_executor:
+                    try:
+                        logger.info("Manual tool integration failed, trying agent executor")
+                        result = self.agent_executor.invoke({
+                            "input": user_input
+                        })
+                        
+                        response_content = result.get("output", str(result))
+                        
+                        # Save to memory
+                        self.memory.add_user_message(user_input)
+                        self.memory.add_ai_message(response_content)
+                        
+                        return response_content
+                        
+                    except Exception as tool_error:
+                        logger.warning(f"Both manual and agent executor failed: {tool_error}")
+                        # Fall through to regular processing
             
             # Regular chat processing with data context injection
             enhanced_prompt = self.system_prompt
@@ -287,37 +292,87 @@ Question: {input}
             if not context['is_visa_related']:
                 return None
             
-            # Determine which tool to use based on query type
-            if context['query_type'] == 'trend_analysis' and context['categories'] and context['countries']:
-                # Use trend analysis tool
-                from agent.visa_tools import VisaTrendAnalysisTool
-                tool = VisaTrendAnalysisTool()
-                return tool._run(context['categories'][0], context['countries'][0])
+            # Import tools
+            from agent.visa_tools import (
+                VisaTrendAnalysisTool, VisaCategoryComparisonTool, 
+                VisaMovementPredictionTool, VisaSummaryReportTool
+            )
             
-            elif context['query_type'] == 'comparison' and context['countries']:
-                # Use category comparison tool
-                from agent.visa_tools import VisaCategoryComparisonTool
-                tool = VisaCategoryComparisonTool()
-                return tool._run(context['countries'][0], context['categories'] if context['categories'] else None)
+            # Determine which tool to use - be more aggressive about tool usage
+            if context['categories'] and context['countries']:
+                # If we have specific category and country, prefer trend analysis or prediction
+                if context['query_type'] in ['trend_analysis', 'explanation', 'general']:
+                    tool = VisaTrendAnalysisTool()
+                    return tool._run(context['categories'][0], context['countries'][0])
+                elif context['query_type'] == 'prediction':
+                    tool = VisaMovementPredictionTool()
+                    return tool._run(context['categories'][0], context['countries'][0])
             
-            elif context['query_type'] == 'prediction' and context['categories'] and context['countries']:
-                # Use prediction tool
-                from agent.visa_tools import VisaMovementPredictionTool
-                tool = VisaMovementPredictionTool()
-                return tool._run(context['categories'][0], context['countries'][0])
+            elif context['countries'] and not context['categories']:
+                # Country specified but no category - use comparison or summary
+                if context['query_type'] == 'comparison':
+                    tool = VisaCategoryComparisonTool()
+                    return tool._run(context['countries'][0], None)
+                else:
+                    # Default to summary for country queries
+                    tool = VisaSummaryReportTool()
+                    return tool._run(None, context['countries'])
             
-            elif context['query_type'] == 'summary':
-                # Use summary report tool
-                from agent.visa_tools import VisaSummaryReportTool
+            elif context['categories'] and not context['countries']:
+                # Category specified but no country - use summary
                 tool = VisaSummaryReportTool()
-                return tool._run(context['categories'] if context['categories'] else None,
-                               context['countries'] if context['countries'] else None)
+                return tool._run(context['categories'], None)
+            
+            elif context['query_type'] == 'summary' or len(context['keywords']) > 0:
+                # General visa query - use summary report
+                tool = VisaSummaryReportTool()
+                return tool._run(None, None)
             
             return None
             
         except Exception as e:
             logger.error(f"Error in manual tool integration: {e}")
             return None
+    
+    def _process_tool_data_with_llm(self, user_input: str, tool_data: str) -> str:
+        """Process tool data with LLM to provide intelligent, formatted response"""
+        try:
+            from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+            
+            # Create a processing prompt
+            processing_prompt = f"""You are a visa bulletin expert. The user asked: "{user_input}"
+
+I have retrieved relevant data from our visa bulletin database:
+
+{tool_data}
+
+Please provide an intelligent response to the user's question based on this data. Follow these guidelines:
+1. Answer the user's specific question and formatting request
+2. If they asked for a "paragraph" format, provide a flowing paragraph
+3. If they asked for a "summary", be concise
+4. Use natural language, not just raw data
+5. Highlight key insights and trends
+6. Be conversational and helpful
+
+Respond directly to what the user asked for."""
+
+            # Format the prompt with user input
+            messages = [
+                SystemMessagePromptTemplate.from_template("You are a helpful visa bulletin expert assistant."),
+                HumanMessagePromptTemplate.from_template(processing_prompt)
+            ]
+            
+            prompt_template = ChatPromptTemplate.from_messages(messages)
+            formatted_messages = prompt_template.format_messages()
+            
+            # Get response from LLM
+            response = self.llm.invoke(formatted_messages)
+            return response.content
+            
+        except Exception as e:
+            logger.error(f"Error processing tool data with LLM: {e}")
+            # Fallback to raw tool data
+            return tool_data
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """Return the conversation history as a list of dictionaries"""
