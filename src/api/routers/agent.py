@@ -15,6 +15,9 @@ from agent.core import AIAgent
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Constants
+SESSION_NOT_FOUND_MESSAGE = "Session not found"
+
 # In-memory session storage (in production, use Redis or database)
 agent_sessions = {}
 
@@ -62,7 +65,7 @@ async def chat_with_agent(request: ChatRequest):
 async def get_conversation_history(session_id: str):
     """Get conversation history for a session"""
     if session_id not in agent_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_MESSAGE)
     
     agent = agent_sessions[session_id]
     history = agent.get_conversation_history()
@@ -76,7 +79,7 @@ async def get_conversation_history(session_id: str):
 async def clear_conversation_history(session_id: str):
     """Clear conversation history for a session"""
     if session_id not in agent_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=SESSION_NOT_FOUND_MESSAGE)
     
     agent = agent_sessions[session_id]
     agent.clear_history()
@@ -111,7 +114,7 @@ async def get_supported_providers():
 async def get_agent_status(session_id: str):
     """Get agent status for a session"""
     if session_id not in agent_sessions:
-        return {"session_exists": False, "message": "Session not found"}
+        return {"session_exists": False, "message": SESSION_NOT_FOUND_MESSAGE}
     
     agent = agent_sessions[session_id]
     history_count = len(agent.get_conversation_history())

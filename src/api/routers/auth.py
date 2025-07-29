@@ -18,7 +18,7 @@ VALID_API_KEYS = {
     "readonly-key-456": {"name": "Read Only User", "permissions": ["read"]}
 }
 
-async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """Get current user from API key"""
     if not credentials:
         return None  # Allow anonymous access for demo
