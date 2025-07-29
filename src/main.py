@@ -5,6 +5,7 @@ import streamlit as st
 from ui.components.sidebar import render_sidebar
 from ui.pages.chat import render_chat_page
 from ui.pages.analytics import render_analytics_page
+from ui.pages.visa_prediction import render_visa_prediction_page
 
 def apply_custom_css():
     """Apply custom CSS styling"""
@@ -96,7 +97,7 @@ def main():
         # Page navigation
         page = st.selectbox(
             "Choose a page:",
-            ["🤖 Agent Chat", "📊 Visa Analytics"],
+            ["🤖 Agent Chat", "📊 Visa Analytics", "🔮 Visa Prediction"],
             label_visibility="collapsed"
         )
         
@@ -105,6 +106,8 @@ def main():
             render_chat_page()
         elif page == "📊 Visa Analytics":
             render_analytics_page()
+        elif page == "🔮 Visa Prediction":
+            render_visa_prediction_page()
 
 if __name__ == "__main__":
     main()
