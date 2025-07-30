@@ -109,7 +109,7 @@ class TestApplicationConfiguration:
     def test_app_defaults(self):
         """Test application default settings"""
         config = Config()
-        assert config.APP_NAME == "Visa_Bulletin_AI"
+        assert config.APP_NAME == "AgentVisa"
         assert config.APP_VERSION == "1.0.0"
         assert config.DEBUG == False
         assert config.LOG_LEVEL == "INFO"

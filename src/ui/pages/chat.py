@@ -110,7 +110,7 @@ def render_chat_page():
     current_mode = st.session_state.get('expert_mode', 'General')
     mode_icon = "🎯" if current_mode == "Visa Expert" else "🤖"
     
-    st.title(f"{mode_icon} AI Agent Chat - {current_mode} Mode")
+    st.title(f"{mode_icon} AgentVisa Chat - {current_mode} Mode")
     
     # Initialize session state
     init_session_state()

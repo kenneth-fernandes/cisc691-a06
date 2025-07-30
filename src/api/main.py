@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="AI Agent & Visa Analytics API",
-    description="REST API for AI agent interactions and US visa bulletin analytics",
+    title="AgentVisa API",
+    description="REST API for AgentVisa - AI Assistant for Visa Bulletin Insights",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -68,7 +68,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 async def root():
     """Root endpoint"""
     return {
-        "message": "AI Agent & Visa Analytics API",
+        "message": "AgentVisa - AI Assistant for Visa Bulletin Insights",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health"
