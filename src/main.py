@@ -75,14 +75,14 @@ def apply_custom_css():
 def main():
     """Main application entry point"""
     st.set_page_config(
-        page_title="AI Agent Chat",
+        page_title="AgentVisa",
         page_icon=">",
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
             'Get Help': 'https://github.com/your-repo/issues',
             'Report a bug': 'https://github.com/your-repo/issues/new',
-            'About': "AI Agent using LangChain with multiple provider support"
+            'About': "AgentVisa - AI Assistant for Visa Bulletin Insights"
         }
     )
     

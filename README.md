@@ -1,9 +1,9 @@
-# 🤖 Visa Bulletin AI Agent
+# 🤖 AgentVisa - AI Assistant for Visa Bulletin Insights
 
 ![CI](https://github.com/kenneth-fernandes/cisc691-a06/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-35%25-red)
 
-Containerized AI agent with REST API backend for US visa bulletin analysis and multi-provider LLM chat.
+AgentVisa is a containerized AI assistant with REST API backend that provides intelligent US visa bulletin analysis and multi-provider LLM chat capabilities.
 
 ## ✨ Features
 

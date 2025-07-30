@@ -30,7 +30,7 @@ class Config:
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
         
         # Application Configuration
-        self.APP_NAME = os.getenv("APP_NAME", "Visa Bulletin AI")
+        self.APP_NAME = os.getenv("APP_NAME", "AgentVisa")
         self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
         self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

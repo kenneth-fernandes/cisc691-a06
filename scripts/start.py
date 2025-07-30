@@ -9,7 +9,7 @@ from pathlib import Path
 
 def main():
     """Start containerized application"""
-    print("🚀 Starting Visa Bulletin AI application...")
+    print("🚀 Starting AgentVisa application...")
     print("📊 Database: PostgreSQL")
     print("🔗 API: http://localhost:8000")
     print("💻 Frontend: http://localhost:8501")
