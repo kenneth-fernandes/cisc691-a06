@@ -16,6 +16,7 @@ Containerized AI agent with REST API backend for US visa bulletin analysis and m
 - 🎯 **Core Capabilities**:
   - 💬 Text-based chat interface with conversation memory
   - 🎯 Expert Mode Selection (General AI vs Visa Expert)
+  - 📡 HTTP-based reliable communication protocol
   - ⚙️ Configurable system prompts and response timing metrics
 
 - 📊 **US Visa Bulletin Analytics**:
@@ -29,6 +30,7 @@ Containerized AI agent with REST API backend for US visa bulletin analysis and m
 - 🏗️ **Architecture**:
   - 🐳 Full Docker containerization with microservices
   - ⚡ REST API with FastAPI backend
+  - 📡 HTTP-based request/response communication
   - 🗄️ PostgreSQL database with Redis caching
   - 🏭 Factory pattern for agent creation
   - 📚 Layered architecture with clean separation
@@ -153,6 +155,7 @@ For detailed technical documentation, see:
 - **[📋 Workflow Diagrams](docs/workflow-diagrams.md)** - System architecture, agent workflows, data flow
 - **[🤖 Detailed Features](docs/detailed-features.md)** - ML models, database architecture, visa expertise
 - **[📊 Data Collection](docs/data-collection.md)** - Historical data collection, setup guides
+- **[📡 WebSocket Analysis](docs/websocket-analysis.md)** - Analysis of real-time communication options and HTTP decision
 
 ### Quick Architecture Overview
 
