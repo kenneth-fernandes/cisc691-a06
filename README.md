@@ -37,45 +37,68 @@ AgentVisa is a containerized AI assistant with REST API backend that provides in
 
 ## 🚀 Quick Start
 
-### 1. Clone and Setup
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) + [kubectl](https://kubernetes.io/docs/tasks/tools/) (for Kubernetes deployment)
+- Git for cloning
+
+### 🎯 Recommended: Kubernetes Deployment
+
 ```bash
+# 1. Clone and setup
+git clone <repository-url>
+cd cisc691-a06
+
+# 2. Start Minikube
+minikube start --driver=docker
+
+# 3. Deploy application
+chmod +x k8s/deploy.sh
+./k8s/deploy.sh
+
+# 4. Access application
+minikube service web -n visa-app
+# This opens a tunnel and your browser automatically
+# Use the tunnel URL shown (e.g., http://127.0.0.1:xxxxx)
+# Keep the terminal with tunnel open while using the app
+```
+
+**🌐 Accessing Your Application:**
+- **Tunnel URL**: Automatically opens in browser (recommended for macOS/Windows)
+- **Direct IP**: `http://$(minikube ip):30080` (Linux/VM drivers only)
+- **Port Forward**: `kubectl port-forward service/web 8501:8501 -n visa-app` (universal fallback)
+
+**📖 For complete Kubernetes setup, troubleshooting, and platform-specific instructions:**
+**→ See [docs/kubernetes-deployment.md](docs/kubernetes-deployment.md)**
+
+### 🐳 Alternative: Docker Compose
+
+```bash
+# 1. Clone and setup
 git clone <repository-url>
 cd cisc691-a06
 cp .env.example .env
-```
 
-### 2. Add API Keys to `.env`
-```bash
-# For Google Gemini (Free tier - recommended)
-GOOGLE_API_KEY=your_google_api_key_here
+# 2. Add your API keys to .env file
+# GOOGLE_API_KEY=your_google_api_key_here
 
-# For OpenAI (if you have one)
-OPENAI_API_KEY=your_openai_key_here
-
-# For Anthropic (if you have one)  
-ANTHROPIC_API_KEY=your_anthropic_key_here
-```
-
-### 3. Start Application
-```bash
+# 3. Start application
 docker-compose up --build
+
+# 4. Access services
+# Web UI: http://localhost:8501
+# API: http://localhost:8000
 ```
 
-### 4. Access Services
-- **Frontend**: http://localhost:8501
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Cache Stats**: http://localhost:8000/api/analytics/cache/stats
-- **Health Check**: http://localhost:8000/health
+### 🗂️ Complete Workflow
 
-### 5. (Optional) Setup Ollama for Local Models
-```bash
-# Install Ollama from https://ollama.com/download
-ollama pull llama3.2
-
-# Verify Ollama is running:
-curl http://localhost:11434/api/tags
-```
+| Step | Kubernetes | Docker Compose | Documentation |
+|------|------------|----------------|---------------|
+| **Setup** | `minikube start` | `cp .env.example .env` | [kubernetes-deployment.md](docs/kubernetes-deployment.md) |
+| **Deploy** | `./k8s/deploy.sh` | `docker-compose up --build` | [detailed-features.md](docs/detailed-features.md) |
+| **Access** | `minikube service web -n visa-app` (tunnel mode) | `http://localhost:8501` | [workflow-diagrams.md](docs/workflow-diagrams.md) |
+| **Data Collection** | Execute in pod | Execute in container | [data-collection.md](docs/data-collection.md) |
+| **Cleanup** | `./k8s/cleanup.sh` | `docker-compose down` | [kubernetes-deployment.md](docs/kubernetes-deployment.md) |
 
 ## 🐳 Docker Services
 
@@ -130,12 +153,89 @@ python scripts/test_visa_agent.py # Visa bulletin expertise
 
 ## 🛠️ Troubleshooting
 
-### Check Service Status
+### Kubernetes/Minikube Issues
+
+#### Cannot Access Application URLs
+**If direct IP access doesn't work:**
+- You're likely using Docker driver on macOS/Windows
+- Use the tunnel method: `minikube service web -n visa-app`
+- Keep the tunnel terminal open for consistent access
+
+**If tunnel ports keep changing:**
+- This is normal behavior for the tunnel
+- Use port forwarding for consistent localhost access:
+  ```bash
+  kubectl port-forward service/web 8501:8501 -n visa-app
+  ```
+
+**If nothing works:**
+```bash
+# Check pod status
+kubectl get pods -n visa-app
+
+# Check service endpoints
+kubectl get endpoints -n visa-app
+
+# Check logs for errors
+kubectl logs -f deployment/web -n visa-app
+kubectl logs -f deployment/api -n visa-app
+
+# Describe failing pods
+kubectl describe pod <pod-name> -n visa-app
+```
+
+#### Deployment Issues
+```bash
+# Check Minikube status
+minikube status
+
+# Restart Minikube if needed
+minikube stop
+minikube start --driver=docker
+
+# Redeploy application
+./k8s/cleanup.sh
+./k8s/deploy.sh
+```
+
+#### Manual Kubernetes Commands
+If the automated script fails, deploy manually:
+```bash
+# Configure Docker environment
+eval $(minikube docker-env)
+
+# Build images
+docker build -f Dockerfile.api -t visa-app-api:latest .
+docker build -f Dockerfile.web -t visa-app-web:latest .
+
+# Deploy resources
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets/app-secrets.yaml
+kubectl apply -f k8s/configmaps/app-config.yaml
+kubectl apply -f k8s/volumes/
+kubectl apply -f k8s/deployments/postgres.yaml
+kubectl apply -f k8s/services/postgres-service.yaml
+kubectl apply -f k8s/deployments/redis.yaml
+kubectl apply -f k8s/services/redis-service.yaml
+
+# Wait for database
+kubectl wait --for=condition=ready pod -l app=postgres -n visa-app --timeout=300s
+
+# Deploy application
+kubectl apply -f k8s/deployments/api.yaml
+kubectl apply -f k8s/services/api-service.yaml
+kubectl apply -f k8s/deployments/web.yaml
+kubectl apply -f k8s/services/web-service.yaml
+```
+
+### Docker Compose Issues
+
+#### Check Service Status
 ```bash
 docker-compose ps
 ```
 
-### View Logs
+#### View Logs
 ```bash
 docker-compose logs api    # API logs
 docker-compose logs web    # Web logs
@@ -143,7 +243,7 @@ docker-compose logs db     # Database logs
 docker-compose logs redis  # Cache logs
 ```
 
-### Restart Services
+#### Restart Services
 ```bash
 docker-compose restart     # Restart all
 docker-compose down && docker-compose up --build  # Clean restart
@@ -152,6 +252,7 @@ docker-compose down && docker-compose up --build  # Clean restart
 ## 📊 System Architecture & Documentation
 
 For detailed technical documentation, see:
+- **[🚀 Kubernetes Deployment](docs/kubernetes-deployment.md)** - Complete K8s setup, troubleshooting, platform-specific instructions
 - **[📋 Workflow Diagrams](docs/workflow-diagrams.md)** - System architecture, agent workflows, data flow
 - **[🤖 Detailed Features](docs/detailed-features.md)** - ML models, database architecture, visa expertise
 - **[📊 Data Collection](docs/data-collection.md)** - Historical data collection, setup guides
