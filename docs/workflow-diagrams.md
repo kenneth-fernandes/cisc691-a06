@@ -547,6 +547,280 @@ PYTHONPATH=/app/src
 API_BASE_URL=http://api:8000
 ```
 
+## Kubernetes Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Kubernetes Cluster (visa-app namespace)"
+        subgraph "Frontend Tier"
+            WEB_POD[Web Pod<br/>Streamlit UI<br/>visa-app-web:latest]
+            WEB_SVC[Web Service<br/>NodePort: 30080<br/>ClusterIP: 8501]
+        end
+        
+        subgraph "API Tier"
+            API_POD[API Pod<br/>FastAPI Backend<br/>visa-app-api:latest]
+            API_SVC[API Service<br/>NodePort: 30081<br/>ClusterIP: 8000]
+        end
+        
+        subgraph "Database Tier"
+            PG_STATEFUL[PostgreSQL StatefulSet<br/>postgres:15-alpine<br/>Persistent Storage]
+            PG_SVC[PostgreSQL Service<br/>ClusterIP: 5432<br/>Internal Only]
+            PG_PVC[PostgreSQL PVC<br/>1Gi Storage<br/>ReadWriteOnce]
+        end
+        
+        subgraph "Cache Tier"
+            REDIS_POD[Redis Pod<br/>redis:7.0-alpine<br/>Persistent Storage]
+            REDIS_SVC[Redis Service<br/>ClusterIP: 6379<br/>Internal Only]
+            REDIS_PVC[Redis PVC<br/>512Mi Storage<br/>ReadWriteOnce]
+        end
+        
+        subgraph "Configuration"
+            CONFIGMAP[ConfigMap<br/>app-config<br/>Environment Variables]
+            SECRETS[Secret<br/>app-secrets<br/>API Keys & Passwords]
+        end
+    end
+    
+    subgraph "External Access"
+        USERS[Users]
+        MINIKUBE[Minikube Service<br/>Tunnel/Port Forward]
+    end
+    
+    %% External connections
+    USERS -->|HTTP| MINIKUBE
+    MINIKUBE -->|Tunnel| WEB_SVC
+    MINIKUBE -->|Tunnel| API_SVC
+    
+    %% Internal service connections
+    WEB_POD -->|API Calls| API_SVC
+    API_POD -->|Database Queries| PG_SVC
+    API_POD -->|Cache Operations| REDIS_SVC
+    
+    %% Service to pod connections
+    WEB_SVC --> WEB_POD
+    API_SVC --> API_POD
+    PG_SVC --> PG_STATEFUL
+    REDIS_SVC --> REDIS_POD
+    
+    %% Storage connections
+    PG_STATEFUL -.->|Mount| PG_PVC
+    REDIS_POD -.->|Mount| REDIS_PVC
+    
+    %% Configuration connections
+    WEB_POD -.->|Config| CONFIGMAP
+    API_POD -.->|Config| CONFIGMAP
+    PG_STATEFUL -.->|Config| CONFIGMAP
+    REDIS_POD -.->|Config| CONFIGMAP
+    
+    WEB_POD -.->|Secrets| SECRETS
+    API_POD -.->|Secrets| SECRETS
+    PG_STATEFUL -.->|Secrets| SECRETS
+    REDIS_POD -.->|Secrets| SECRETS
+    
+    %% Styling with distinct colors
+    classDef frontend fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef api fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef database fill:#7b1fa2,stroke:#4a148c,stroke-width:3px,color:#ffffff
+    classDef cache fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
+    classDef config fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    classDef storage fill:#607d8b,stroke:#455a64,stroke-width:2px,color:#ffffff
+    classDef external fill:#795548,stroke:#5d4037,stroke-width:2px,color:#ffffff
+    
+    class WEB_POD,WEB_SVC frontend
+    class API_POD,API_SVC api
+    class PG_STATEFUL,PG_SVC database
+    class REDIS_POD,REDIS_SVC cache
+    class CONFIGMAP,SECRETS config
+    class PG_PVC,REDIS_PVC storage
+    class USERS,MINIKUBE external
+```
+
+## Kubernetes Deployment Flow
+
+```mermaid
+flowchart TD
+    START([Start Deployment]) --> MINIKUBE_CHECK{Minikube Running?}
+    MINIKUBE_CHECK -->|No| START_MINIKUBE[minikube start]
+    MINIKUBE_CHECK -->|Yes| DOCKER_ENV[eval $(minikube docker-env)]
+    START_MINIKUBE --> DOCKER_ENV
+    
+    DOCKER_ENV --> BUILD_IMAGES[Build Docker Images]
+    BUILD_IMAGES --> BUILD_API[docker build -f Dockerfile.api -t visa-app-api:latest .]
+    BUILD_IMAGES --> BUILD_WEB[docker build -f Dockerfile.web -t visa-app-web:latest .]
+    
+    BUILD_API --> DEPLOY_INFRA[Deploy Infrastructure]
+    BUILD_WEB --> DEPLOY_INFRA
+    
+    DEPLOY_INFRA --> CREATE_NS[kubectl apply -f k8s/namespace.yaml]
+    CREATE_NS --> DEPLOY_SECRETS[kubectl apply -f k8s/secrets/]
+    DEPLOY_SECRETS --> DEPLOY_CONFIG[kubectl apply -f k8s/configmaps/]
+    DEPLOY_CONFIG --> DEPLOY_STORAGE[kubectl apply -f k8s/volumes/]
+    
+    DEPLOY_STORAGE --> DEPLOY_DB[Deploy Database Layer]
+    DEPLOY_DB --> PG_DEPLOY[kubectl apply -f k8s/deployments/postgres.yaml]
+    PG_DEPLOY --> PG_SERVICE[kubectl apply -f k8s/services/postgres-service.yaml]
+    PG_SERVICE --> PG_WAIT[kubectl wait --for=condition=ready pod -l app=postgres]
+    
+    PG_WAIT --> DEPLOY_CACHE[Deploy Cache Layer]
+    DEPLOY_CACHE --> REDIS_DEPLOY[kubectl apply -f k8s/deployments/redis.yaml]
+    REDIS_DEPLOY --> REDIS_SERVICE[kubectl apply -f k8s/services/redis-service.yaml]
+    REDIS_SERVICE --> REDIS_WAIT[kubectl wait --for=condition=ready pod -l app=redis]
+    
+    REDIS_WAIT --> DEPLOY_APP[Deploy Application Layer]
+    DEPLOY_APP --> API_DEPLOY[kubectl apply -f k8s/deployments/api.yaml]
+    API_DEPLOY --> API_SERVICE[kubectl apply -f k8s/services/api-service.yaml]
+    API_SERVICE --> API_WAIT[kubectl wait --for=condition=ready pod -l app=api]
+    
+    API_WAIT --> WEB_DEPLOY[kubectl apply -f k8s/deployments/web.yaml]
+    WEB_DEPLOY --> WEB_SERVICE[kubectl apply -f k8s/services/web-service.yaml]
+    WEB_SERVICE --> WEB_WAIT[kubectl wait --for=condition=ready pod -l app=web]
+    
+    WEB_WAIT --> VERIFY[Verify Deployment]
+    VERIFY --> CHECK_PODS[kubectl get pods -n visa-app]
+    CHECK_PODS --> CHECK_SERVICES[kubectl get services -n visa-app]
+    CHECK_SERVICES --> ACCESS_APP[minikube service web -n visa-app]
+    ACCESS_APP --> END([Deployment Complete])
+    
+    %% Error handling
+    PG_WAIT -->|Timeout| PG_DEBUG[Check PostgreSQL logs]
+    REDIS_WAIT -->|Timeout| REDIS_DEBUG[Check Redis logs]
+    API_WAIT -->|Timeout| API_DEBUG[Check API logs]
+    WEB_WAIT -->|Timeout| WEB_DEBUG[Check Web logs]
+    
+    PG_DEBUG --> END
+    REDIS_DEBUG --> END
+    API_DEBUG --> END
+    WEB_DEBUG --> END
+    
+    %% Styling
+    classDef startEnd fill:#4caf50,color:white
+    classDef process fill:#2196f3,color:white
+    classDef decision fill:#ff9800,color:white
+    classDef deploy fill:#9c27b0,color:white
+    classDef error fill:#f44336,color:white
+    
+    class START,END startEnd
+    class MINIKUBE_CHECK decision
+    class START_MINIKUBE,DOCKER_ENV,BUILD_IMAGES,BUILD_API,BUILD_WEB,VERIFY,CHECK_PODS,CHECK_SERVICES,ACCESS_APP process
+    class DEPLOY_INFRA,CREATE_NS,DEPLOY_SECRETS,DEPLOY_CONFIG,DEPLOY_STORAGE,DEPLOY_DB,PG_DEPLOY,PG_SERVICE,DEPLOY_CACHE,REDIS_DEPLOY,REDIS_SERVICE,DEPLOY_APP,API_DEPLOY,API_SERVICE,WEB_DEPLOY,WEB_SERVICE deploy
+    class PG_WAIT,REDIS_WAIT,API_WAIT,WEB_WAIT,PG_DEBUG,REDIS_DEBUG,API_DEBUG,WEB_DEBUG error
+```
+
+## Kubernetes Resource Hierarchy
+
+```mermaid
+graph TD
+    subgraph "Namespace: visa-app"
+        subgraph "ConfigMaps & Secrets"
+            CM[app-config<br/>ConfigMap]
+            SEC[app-secrets<br/>Secret]
+        end
+        
+        subgraph "Storage"
+            PG_PVC[postgres-pvc<br/>PersistentVolumeClaim<br/>1Gi]
+            REDIS_PVC[redis-pvc<br/>PersistentVolumeClaim<br/>512Mi]
+        end
+        
+        subgraph "Database Services"
+            PG_SS[postgres<br/>StatefulSet<br/>1 replica]
+            PG_SVC[postgres-service<br/>ClusterIP:5432]
+        end
+        
+        subgraph "Cache Services"
+            REDIS_DEP[redis<br/>Deployment<br/>1 replica]
+            REDIS_SVC[redis-service<br/>ClusterIP:6379]
+        end
+        
+        subgraph "Application Services"
+            API_DEP[api<br/>Deployment<br/>1+ replicas]
+            API_SVC[api-service<br/>NodePort:30081]
+            
+            WEB_DEP[web<br/>Deployment<br/>1+ replicas]
+            WEB_SVC[web-service<br/>NodePort:30080]
+        end
+    end
+    
+    %% Resource relationships
+    PG_SS -.->|mounts| PG_PVC
+    REDIS_DEP -.->|mounts| REDIS_PVC
+    
+    PG_SVC -.->|targets| PG_SS
+    REDIS_SVC -.->|targets| REDIS_DEP
+    API_SVC -.->|targets| API_DEP
+    WEB_SVC -.->|targets| WEB_DEP
+    
+    PG_SS -.->|uses| CM
+    PG_SS -.->|uses| SEC
+    REDIS_DEP -.->|uses| CM
+    REDIS_DEP -.->|uses| SEC
+    API_DEP -.->|uses| CM
+    API_DEP -.->|uses| SEC
+    WEB_DEP -.->|uses| CM
+    WEB_DEP -.->|uses| SEC
+    
+    %% Dependencies
+    API_DEP -.->|depends on| PG_SVC
+    API_DEP -.->|depends on| REDIS_SVC
+    WEB_DEP -.->|depends on| API_SVC
+    
+    %% Styling with distinct colors
+    classDef config fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#ffffff
+    classDef storage fill:#607d8b,stroke:#455a64,stroke-width:2px,color:#ffffff
+    classDef database fill:#7b1fa2,stroke:#4a148c,stroke-width:2px,color:#ffffff
+    classDef cache fill:#d32f2f,stroke:#b71c1c,stroke-width:2px,color:#ffffff
+    classDef application fill:#2196f3,stroke:#1565c0,stroke-width:2px,color:#ffffff
+    
+    class CM,SEC config
+    class PG_PVC,REDIS_PVC storage
+    class PG_SS,PG_SVC database
+    class REDIS_DEP,REDIS_SVC cache
+    class API_DEP,API_SVC,WEB_DEP,WEB_SVC application
+```
+
+## Kubernetes Access Patterns
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Minikube as Minikube Service
+    participant WebSvc as Web Service (NodePort)
+    participant WebPod as Web Pod
+    participant APISvc as API Service (ClusterIP)
+    participant APIPod as API Pod
+    participant DBSvc as DB Service (ClusterIP)
+    participant DBPod as PostgreSQL Pod
+    
+    Note over User,DBPod: Kubernetes Service Discovery & Load Balancing
+    
+    User->>Minikube: Access via tunnel URL
+    Minikube->>WebSvc: Forward to NodePort 30080
+    WebSvc->>WebPod: Load balance to healthy pod
+    
+    WebPod->>APISvc: Internal API call (api:8000)
+    APISvc->>APIPod: Route to available pod
+    
+    APIPod->>DBSvc: Database query (postgres:5432)
+    DBSvc->>DBPod: Connect to StatefulSet pod
+    DBPod-->>APIPod: Return data
+    
+    APIPod-->>WebPod: JSON response
+    WebPod-->>User: Rendered HTML
+    
+    Note over User,DBPod: All internal communication uses service discovery
+```
+
+## Kubernetes Resource Configuration
+
+| Resource Type | Name | Replicas | Storage | Ports | Access |
+|---------------|------|----------|---------|-------|---------|
+| **StatefulSet** | postgres | 1 | 1Gi PVC | 5432 | ClusterIP |
+| **Deployment** | redis | 1 | 512Mi PVC | 6379 | ClusterIP |
+| **Deployment** | api | 1+ | - | 8000 | NodePort:30081 |
+| **Deployment** | web | 1+ | - | 8501 | NodePort:30080 |
+| **Service** | postgres-service | - | - | 5432 | ClusterIP |
+| **Service** | redis-service | - | - | 6379 | ClusterIP |
+| **Service** | api-service | - | - | 8000→30081 | NodePort |
+| **Service** | web-service | - | - | 8501→30080 | NodePort |
+
 ---
 
 *Generated with Claude Code - Professional Technical Documentation for Academic Submission*
