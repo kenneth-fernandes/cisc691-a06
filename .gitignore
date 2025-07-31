@@ -27,6 +27,7 @@ MANIFEST
 .env
 .env.local
 .env.production
+.env.*
 
 # Virtual environments
 venv/
@@ -82,3 +83,20 @@ logs/
 .venv/
 
 data/
+
+# Kubernetes secrets (contains real API keys and passwords)
+/k8s/secrets/app-secrets.yaml
+
+# Terraform sensitive files
+terraform/terraform.tfvars
+terraform/terraform.tfvars.backup
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfplan
+terraform/.terraform.d/
+
+# Local development override files
+docker-compose.override.yml
+docker-compose.local.yml

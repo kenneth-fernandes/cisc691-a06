@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: visa-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: visa-app-web:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8501
+        env:
+        - name: API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: API_BASE_URL
+        - name: PYTHONPATH
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PYTHONPATH
+        - name: DOCKER_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DOCKER_MODE
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: google-api-key
+              optional: true
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: openai-api-key
+              optional: true
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: anthropic-api-key
+              optional: true
+        - name: LLM_PROVIDER
+          value: google
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "150m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"

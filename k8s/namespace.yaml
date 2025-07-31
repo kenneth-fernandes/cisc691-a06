@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visa-app
+  labels:
+    name: visa-app

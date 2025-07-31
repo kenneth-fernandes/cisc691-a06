@@ -46,16 +46,35 @@ class Config:
         # Database Configuration (PostgreSQL only in Docker)
         self.DATABASE_TYPE = "postgresql"
         self.DATABASE_PATH = os.getenv("DATABASE_PATH", "data/app.db")  # Fallback for local development
-        self.POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
-        self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-        self.POSTGRES_DB = os.getenv("POSTGRES_DB", "app_db")
+        self.POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
+        
+        # Handle POSTGRES_PORT which might be a service URL in Kubernetes
+        postgres_port_env = os.getenv("POSTGRES_PORT", "5432")
+        if postgres_port_env.startswith("tcp://"):
+            # Extract port from service URL format: tcp://ip:port
+            self.POSTGRES_PORT = int(postgres_port_env.split(":")[-1])
+        else:
+            self.POSTGRES_PORT = int(postgres_port_env)
+            
+        self.POSTGRES_DB = os.getenv("POSTGRES_DB", "visa_app")
         self.POSTGRES_USER = os.getenv("POSTGRES_USER", "admin")
         self.POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
         
         # Redis Configuration
         self.REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-        self.REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+        
+        # Handle REDIS_PORT which might be a service URL in Kubernetes
+        redis_port_env = os.getenv("REDIS_PORT", "6379")
+        if redis_port_env.startswith("tcp://"):
+            # Extract port from service URL format: tcp://ip:port
+            self.REDIS_PORT = int(redis_port_env.split(":")[-1])
+        else:
+            self.REDIS_PORT = int(redis_port_env)
+            
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "redis_password")
+        
+        # Build DATABASE_URL from components
+        self.DATABASE_URL = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         
     
     def validate_config(self, provider: str = None) -> bool:
