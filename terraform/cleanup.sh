@@ -47,24 +47,27 @@ echo -e "${BLUE}📋 Resources to be destroyed:${NC}"
 echo "  • GKE Cluster: agentvisa-cluster (4 nodes)"
 echo "  • Node Pool: agentvisa-node-pool (CPU nodes)"
 echo "  • Artifact Registry: agentvisa"
-echo "  • Static IP for Ingress: agentvisa-ingress-ip"
-echo "  • SSL Certificate (Google-managed)"
-echo "  • Load Balancer (Ingress)"
+echo "  • LoadBalancer Service (web-lb) with external IP"
+echo "  • HTTPS Load Balancer (if configured with domain)"
+echo "  • SSL Certificate (Google-managed, if configured)"
+echo "  • NodePort Service (for HTTPS backend, if configured)"
 echo "  • Horizontal Pod Autoscaler (HPA)"
 echo "  • Data Collection Jobs (initial + daily CronJob)"
 echo "  • PostgreSQL Database with visa bulletin data"
 echo "  • ConfigMaps and Secrets"
 echo "  • All Kubernetes resources"
 echo "  • Container images (API + Web)"
-echo "  • Note: Ollama was removed for cost optimization"
+echo "  • Note: Supports both HTTP-only and HTTPS setups"
 echo ""
 echo -e "${GREEN}💰 This will STOP ALL CHARGES for:${NC}"
 echo "  • GKE cluster management (~$74/month)"
 echo "  • 4x compute nodes (~$29/month)"
-echo "  • Load Balancer/Ingress (~$5/month)"
+echo "  • LoadBalancer service (~$1.46/month)"
+echo "  • HTTPS Load Balancer (~$18/month, if configured)"
+echo "  • SSL Certificate (free with Google-managed)"
 echo "  • Storage (~$7/month, database only)"
-echo "  • Networking (~$5/month)"
-echo "  • Total: ~$116/month"
+echo "  • Networking (minimal egress)"
+echo "  • Total: ~$112/month (HTTP) or ~$130/month (HTTPS)"
 echo ""
 
 # Ask for confirmation
@@ -82,9 +85,9 @@ echo -e "${RED}🗑️  Starting destruction process...${NC}"
 # Delete Kubernetes resources first (faster than waiting for cluster deletion)
 echo -e "${BLUE}☸️  Deleting Kubernetes resources...${NC}"
 if kubectl get namespace visa-app &>/dev/null; then
-    echo "Deleting Ingress and Load Balancer..."
-    kubectl delete ingress --all -n visa-app --ignore-not-found=true
-    kubectl delete managedcertificate --all -n visa-app --ignore-not-found=true
+    echo "Deleting LoadBalancer and NodePort services..."
+    kubectl delete service web-lb -n visa-app --ignore-not-found=true
+    kubectl delete service web-nodeport-ssl -n visa-app --ignore-not-found=true
     
     echo "Note: Ollama not deployed in this GKE setup"
     
@@ -120,11 +123,7 @@ else
         gcloud container clusters delete agentvisa-cluster --zone=$ZONE --project=$PROJECT_ID --quiet
     fi
     
-    # Delete static IP (if exists)
-    if gcloud compute addresses describe agentvisa-ingress-ip --global --project=$PROJECT_ID &>/dev/null; then
-        echo "Deleting static IP address..."
-        gcloud compute addresses delete agentvisa-ingress-ip --global --project=$PROJECT_ID --quiet
-    fi
+    # Note: No static IP to delete (LoadBalancer manages its own IP)
     
     # Delete Artifact Registry
     if gcloud artifacts repositories describe agentvisa --location=$REGION --project=$PROJECT_ID &>/dev/null; then

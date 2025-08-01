@@ -18,7 +18,7 @@ REGION="${GCP_REGION:-us-central1}"
 ZONE="${GCP_ZONE:-us-central1-a}"
 
 echo -e "${BLUE}🚀 AgentVisa GKE Deployment (Cost-Optimized)${NC}"
-echo -e "${YELLOW}💰 Estimated monthly cost: ~$116 with 4x e2-medium nodes (no Ollama)${NC}"
+echo -e "${YELLOW}💰 Estimated monthly cost: ~$112 with 4x e2-medium nodes (LoadBalancer setup)${NC}"
 echo ""
 
 # If PROJECT_ID is not set, try to get it from gcloud
@@ -76,19 +76,43 @@ gcloud auth application-default login --quiet 2>/dev/null || true
 echo -e "${BLUE}🏗️  Initializing Terraform...${NC}"
 terraform init
 
+# Check for domain configuration
+DOMAIN_NAME=""
+echo -e "${BLUE}🌐 SSL/HTTPS Configuration${NC}"
+echo ""
+read -p "Do you want to set up HTTPS with SSL certificate? (requires domain) (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    read -p "Enter your domain name (e.g., app.yourdomain.com): " DOMAIN_NAME
+    if [ ! -z "$DOMAIN_NAME" ]; then
+        echo -e "${GREEN}✅ Will create HTTPS setup for: $DOMAIN_NAME${NC}"
+        echo -e "${YELLOW}⚠️  Remember to point your domain A record to the HTTPS IP after deployment${NC}"
+        TERRAFORM_VARS="-var=project_id=$PROJECT_ID -var=region=$REGION -var=zone=$ZONE -var=domain_name=$DOMAIN_NAME"
+        HTTPS_SETUP=true
+    else
+        echo -e "${YELLOW}📋 No domain provided, using HTTP-only LoadBalancer${NC}"
+        TERRAFORM_VARS="-var=project_id=$PROJECT_ID -var=region=$REGION -var=zone=$ZONE"
+        HTTPS_SETUP=false
+    fi
+else
+    echo -e "${YELLOW}📋 Using HTTP-only LoadBalancer (simple setup)${NC}"
+    TERRAFORM_VARS="-var=project_id=$PROJECT_ID -var=region=$REGION -var=zone=$ZONE"
+    HTTPS_SETUP=false
+fi
+
 # Plan deployment
 echo -e "${BLUE}📋 Planning Terraform deployment...${NC}"
-terraform plan -var="project_id=$PROJECT_ID" -var="region=$REGION" -var="zone=$ZONE"
+terraform plan $TERRAFORM_VARS
 
 # Ask for confirmation
 echo ""
-echo -e "${YELLOW}⚠️  This will create GKE resources that incur costs (estimated $116/month)${NC}"
+echo -e "${YELLOW}⚠️  This will create GKE resources that incur costs (estimated $112/month)${NC}"
 echo -e "${YELLOW}Cost breakdown:${NC}"
 echo -e "  • GKE cluster management: $74.40/month"
 echo -e "  • 4x e2-medium preemptible nodes: $29.36/month"
 echo -e "  • Storage (45GB total): $7.00/month (database only)"
-echo -e "  • Networking (Load Balancer + Ingress): $5.00/month"
-echo -e "  • Note: Ollama removed from GKE for cost optimization"
+echo -e "  • Networking (LoadBalancer service): $1.46/month"
+echo -e "  • Note: Using LoadBalancer instead of Ingress (simpler setup)"
 echo ""
 read -p "Do you want to proceed with deployment? (y/N): " -n 1 -r
 echo
@@ -99,7 +123,7 @@ fi
 
 # Apply Terraform
 echo -e "${BLUE}🚀 Deploying infrastructure with Terraform...${NC}"
-terraform apply -var="project_id=$PROJECT_ID" -var="region=$REGION" -var="zone=$ZONE" -auto-approve
+terraform apply $TERRAFORM_VARS -auto-approve
 
 # Get cluster credentials
 echo -e "${BLUE}🔑 Getting cluster credentials...${NC}"
@@ -269,64 +293,53 @@ kubectl apply -f ../k8s/autoscaling/ 2>/dev/null || {
 
 
 
-# 8. Configure and deploy secure Ingress with SSL
-echo -e "${BLUE}🔒 Setting up secure Ingress with SSL...${NC}"
+# 8. Deploy external access services
+echo -e "${BLUE}🌐 Setting up external access services...${NC}"
 
-# Check for custom domain configuration from terraform.tfvars
-CUSTOM_DOMAIN=$(grep '^custom_domain' terraform.tfvars | cut -d'=' -f2 | tr -d ' "')
+# Always deploy HTTP LoadBalancer service
+kubectl apply -f ../k8s/services/web-lb.yaml
 
-if [ ! -z "$CUSTOM_DOMAIN" ] && [ "$CUSTOM_DOMAIN" != "" ]; then
-    echo -e "${GREEN}🌐 Found custom domain in config: $CUSTOM_DOMAIN${NC}"
-    echo -e "${BLUE}🔒 Configuring SSL certificate for domain: $CUSTOM_DOMAIN${NC}"
+if [ "$HTTPS_SETUP" = true ]; then
+    echo -e "${BLUE}🔒 Setting up NodePort service for HTTPS Load Balancer...${NC}"
+    kubectl apply -f ../k8s/services/web-nodeport-ssl.yaml
     
-    # Update the ManagedCertificate with the domain
-    sed -i.bak "s|# - \"your-domain.com\"  # Replace with your actual domain|- \"$CUSTOM_DOMAIN\"|g" ../k8s/ingress/ingress.yaml
-    sed -i.bak "/# IMPORTANT: Replace with your actual domain name/d" ../k8s/ingress/ingress.yaml
-    sed -i.bak "/# If you don't have a domain, comment out this section/d" ../k8s/ingress/ingress.yaml
-    sed -i.bak "/# and use the static IP directly for access/d" ../k8s/ingress/ingress.yaml
+    echo -e "${BLUE}⏳ Waiting for HTTPS Load Balancer to be ready...${NC}"
+    echo "This may take 5-10 minutes for SSL certificate provisioning..."
     
-    # Add host rule to ingress for the domain
-    sed -i.bak "s|  rules:|  rules:\n  - host: $CUSTOM_DOMAIN\n    http:\n      paths:\n      - path: /api/*\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: api\n            port:\n              number: 8000\n      - path: /*\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: web\n            port:\n              number: 8501|" ../k8s/ingress/ingress.yaml
-    
-    USING_DOMAIN=true
-    DOMAIN_NAME="$CUSTOM_DOMAIN"
-    
-    echo -e "${YELLOW}⚠️  Remember to set up DNS: Point $CUSTOM_DOMAIN A record to the static IP${NC}"
-else
-    echo -e "${BLUE}📝 No custom domain configured in terraform.tfvars${NC}"
-    
-    # Check if user wants to use a custom domain
-echo ""
-read -p "Do you have a custom domain to use? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    read -p "Enter your domain name (e.g., app.yourdomain.com): " DOMAIN_NAME
-    if [ ! -z "$DOMAIN_NAME" ]; then
-        echo -e "${BLUE}🌐 Configuring SSL certificate for domain: $DOMAIN_NAME${NC}"
-        # Update the ManagedCertificate with the domain
-        sed -i.bak "s|# - \"your-domain.com\"  # Replace with your actual domain|- \"$DOMAIN_NAME\"|g" ../k8s/ingress/ingress.yaml
-        sed -i.bak "/# IMPORTANT: Replace with your actual domain name/d" ../k8s/ingress/ingress.yaml
-        sed -i.bak "/# If you don't have a domain, comment out this section/d" ../k8s/ingress/ingress.yaml
-        sed -i.bak "/# and use the static IP directly for access/d" ../k8s/ingress/ingress.yaml
-        
-        # Add host rule to ingress for the domain
-        sed -i.bak "s|  rules:|  rules:\n  - host: $DOMAIN_NAME\n    http:\n      paths:\n      - path: /api/*\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: api\n            port:\n              number: 8000\n      - path: /*\n        pathType: ImplementationSpecific\n        backend:\n          service:\n            name: web\n            port:\n              number: 8501|" ../k8s/ingress/ingress.yaml
-        USING_DOMAIN=true
-        
-        echo -e "${YELLOW}📝 Tip: Add 'custom_domain = \"$DOMAIN_NAME\"' to terraform.tfvars for future deployments${NC}"
+    # Get HTTPS IP from Terraform output
+    HTTPS_IP=$(terraform output -raw https_ip 2>/dev/null || echo "")
+    if [ ! -z "$HTTPS_IP" ] && [ "$HTTPS_IP" != "Not created" ]; then
+        echo -e "${GREEN}✅ HTTPS Load Balancer IP: $HTTPS_IP${NC}"
+        echo -e "${YELLOW}⚠️  IMPORTANT: Point $DOMAIN_NAME A record to: $HTTPS_IP${NC}"
+        echo -e "${YELLOW}⏳ SSL certificate will be issued after DNS propagation (5-15 minutes)${NC}"
     fi
 else
-    echo -e "${YELLOW}📋 Using static IP access (no custom domain)${NC}"
-    # Remove the ManagedCertificate section since we don't have a domain
-    echo -e "${BLUE}🔧 Configuring ingress for IP-based access...${NC}"
-    USING_DOMAIN=false
-    
-    echo -e "${YELLOW}📝 Tip: Add 'custom_domain = \"your-domain.com\"' to terraform.tfvars for automatic domain setup${NC}"
+    echo -e "${BLUE}📋 HTTP-only setup selected${NC}"
 fi
 
-fi
+echo -e "${BLUE}⏳ Waiting for HTTP LoadBalancer IP to be assigned...${NC}"
+echo "This may take 1-2 minutes..."
 
-kubectl apply -f ../k8s/ingress/
+# Wait for LoadBalancer IP (max 5 minutes)
+TIMEOUT=300
+COUNTER=0
+LB_IP=""
+
+while [ $COUNTER -lt $TIMEOUT ] && [ -z "$LB_IP" ]; do
+    sleep 10
+    LB_IP=$(kubectl get service web-lb -n visa-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    COUNTER=$((COUNTER + 10))
+    if [ -z "$LB_IP" ]; then
+        echo -n "."
+    fi
+done
+
+echo ""
+if [ ! -z "$LB_IP" ]; then
+    echo -e "${GREEN}✅ HTTP LoadBalancer IP assigned: $LB_IP${NC}"
+else
+    echo -e "${YELLOW}⚠️  LoadBalancer IP not yet assigned, check manually with: kubectl get service web-lb -n visa-app${NC}"
+fi
 
 # 9. Deploy data collection job and CronJob
 echo -e "${BLUE}📊 Deploying visa data collection job...${NC}"
@@ -381,54 +394,47 @@ echo ""
 kubectl get services -n visa-app
 echo ""
 
-# Check SSL certificate provisioning
-echo -e "${BLUE}🔒 Checking SSL certificate provisioning...${NC}"
-kubectl get managedcertificate -n visa-app 2>/dev/null || echo -e "${YELLOW}⚠️  ManagedCertificate not found, SSL may not be configured${NC}"
-
-# Get Ingress IP
-echo -e "${BLUE}🔍 Getting Ingress information...${NC}"
-INGRESS_IP=$(terraform output -raw ingress_ip 2>/dev/null || echo "")
+# Get LoadBalancer IP for access instructions
+echo -e "${BLUE}🔍 Getting access information...${NC}"
+FINAL_LB_IP=$(kubectl get service web-lb -n visa-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+FINAL_HTTPS_IP=$(terraform output -raw https_ip 2>/dev/null || echo "")
 
 # Display access instructions
 echo -e "${GREEN}🌐 Access Instructions:${NC}"
-if [ ! -z "$INGRESS_IP" ]; then
-    echo -e "${GREEN}✅ Static IP Reserved: $INGRESS_IP${NC}"
+
+if [ "$HTTPS_SETUP" = true ] && [ ! -z "$FINAL_HTTPS_IP" ] && [ "$FINAL_HTTPS_IP" != "Not created" ]; then
+    echo -e "${GREEN}✅ HTTPS Load Balancer IP: $FINAL_HTTPS_IP${NC}"
+    echo -e "${GREEN}✅ HTTP LoadBalancer IP: $FINAL_LB_IP${NC}"
     echo ""
-    
-    if [ "$USING_DOMAIN" = true ] && [ ! -z "$DOMAIN_NAME" ]; then
-        echo -e "${BLUE}🌐 Custom Domain URLs:${NC}"
-        echo "   Web Application: https://$DOMAIN_NAME"
-        echo "   API Backend: https://$DOMAIN_NAME/api"
-        echo "   API Health Check: https://$DOMAIN_NAME/api/health"
-        echo ""
-        echo -e "${YELLOW}⚠️  Important DNS Setup:${NC}"
-        echo "   Point your domain A record to: $INGRESS_IP"
-        echo "   DNS propagation may take 1-24 hours"
-        echo ""
-        echo -e "${YELLOW}⏳ SSL Certificate Status:${NC}"
-        echo "   Provisioning time: 5-15 minutes after DNS propagation"
-        echo "   Check status: kubectl get managedcertificate -n visa-app"
-        echo "   Check details: kubectl describe managedcertificate agentvisa-ssl-cert -n visa-app"
-        echo ""
-        echo -e "${BLUE}🔧 Troubleshooting:${NC}"
-        echo "   • Verify DNS: nslookup $DOMAIN_NAME"
-        echo "   • Try IP directly: http://$INGRESS_IP (should redirect)"
-        echo "   • Check ingress: kubectl get ingress -n visa-app"
-    else
-        echo -e "${BLUE}🌐 Static IP URLs:${NC}"
-        echo "   Web Application: http://$INGRESS_IP"
-        echo "   API Backend: http://$INGRESS_IP/api"
-        echo "   API Health Check: http://$INGRESS_IP/api/health"
-        echo ""
-        echo -e "${YELLOW}💡 Note: Using HTTP (no SSL) since no domain was configured${NC}"
-        echo "   For HTTPS, set up a custom domain and redeploy"
-        echo ""
-        echo -e "${BLUE}🔧 Troubleshooting:${NC}"
-        echo "   • Check ingress: kubectl get ingress -n visa-app"
-        echo "   • Check services: kubectl get svc -n visa-app"
-    fi
+    echo -e "${BLUE}🔒 HTTPS URLs (after DNS setup):${NC}"
+    echo "   Web Application: https://$DOMAIN_NAME"
+    echo "   API Backend: https://$DOMAIN_NAME/api (routes through web service)"
+    echo ""
+    echo -e "${BLUE}🌐 HTTP URLs (available now):${NC}"
+    echo "   Web Application: http://$FINAL_LB_IP"
+    echo "   API Backend: http://$FINAL_LB_IP/api (routes through web service)"
+    echo ""
+    echo -e "${YELLOW}⚠️  HTTPS Setup Required:${NC}"
+    echo "   1. Point $DOMAIN_NAME A record to: $FINAL_HTTPS_IP"
+    echo "   2. Wait for DNS propagation (1-24 hours)"
+    echo "   3. SSL certificate will be issued automatically (5-15 minutes after DNS)"
+    echo ""
+    echo -e "${BLUE}🔧 SSL Certificate Status:${NC}"
+    echo "   • Check status: gcloud compute ssl-certificates describe agentvisa-ssl-cert"
+    echo "   • Check load balancer: gcloud compute forwarding-rules list"
+    echo "   • Test HTTPS: curl -I https://$DOMAIN_NAME (after DNS setup)"
+elif [ ! -z "$FINAL_LB_IP" ]; then
+    echo -e "${GREEN}✅ HTTP LoadBalancer IP: $FINAL_LB_IP${NC}"
+    echo ""
+    echo -e "${BLUE}🌐 Application URLs:${NC}"
+    echo "   Web Application: http://$FINAL_LB_IP"
+    echo "   API Backend: http://$FINAL_LB_IP/api (routes through web service)"
+    echo "   Direct API Access: kubectl port-forward service/api 8000:8000 -n visa-app"
+    echo ""
+    echo -e "${YELLOW}💡 Note: Using HTTP LoadBalancer (simple and reliable)${NC}"
+    echo "   To add HTTPS later, redeploy with domain configuration"
 else
-    echo -e "${YELLOW}⚠️  Static IP not found. Using port-forward for access:${NC}"
+    echo -e "${YELLOW}⚠️  LoadBalancer IP not yet assigned. Using port-forward for access:${NC}"
     echo ""
     echo -e "${BLUE}🔧 Port Forward Commands:${NC}"
     echo "   kubectl port-forward service/web 8501:8501 -n visa-app &"
@@ -436,7 +442,16 @@ else
     echo "   Then access:"
     echo "   • Web: http://localhost:8501"
     echo "   • API: http://localhost:8000"
+    echo ""
+    echo -e "${BLUE}🔍 Check LoadBalancer status:${NC}"
+    echo "   kubectl get service web-lb -n visa-app"
 fi
+
+echo ""
+echo -e "${BLUE}🔧 General Troubleshooting:${NC}"
+echo "   • Check all services: kubectl get services -n visa-app"
+echo "   • Check pods: kubectl get pods -n visa-app"
+echo "   • View logs: kubectl logs deployment/web -n visa-app"
 echo ""
 
 # Display monitoring commands

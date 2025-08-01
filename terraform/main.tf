@@ -52,7 +52,7 @@ resource "google_container_cluster" "agentVisa_cluster" {
   location = var.zone  # Zonal cluster is cheaper than regional
   
   # Minimum version for security
-  min_master_version = "1.32.6-gke.1096000"
+  min_master_version = var.kubernetes_version
   
   # Allow deletion for cleanup
   deletion_protection = false
@@ -161,13 +161,141 @@ provider "kubernetes" {
 
 data "google_client_config" "default" {}
 
-# Reserve static IP for Ingress
-resource "google_compute_global_address" "ingress_ip" {
-  name         = "agentvisa-ingress-ip"
-  description  = "Static IP for AgentVisa Ingress"
+# SSL Certificate for HTTPS Load Balancer
+resource "google_compute_managed_ssl_certificate" "agentvisa_ssl" {
+  name = "agentvisa-ssl-cert"
   
-  depends_on = [google_project_service.required_apis]
+  managed {
+    domains = [var.domain_name]
+  }
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
 }
+
+# Static IP for HTTPS Load Balancer
+resource "google_compute_global_address" "https_lb_ip" {
+  name        = "agentvisa-https-ip"
+  description = "Static IP for HTTPS Load Balancer"
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# Get instance group for backend service
+data "google_compute_instance_group" "agentvisa_ig" {
+  name = split("/", google_container_node_pool.agentVisa_nodes.instance_group_urls[0])[length(split("/", google_container_node_pool.agentVisa_nodes.instance_group_urls[0])) - 1]
+  zone = var.zone
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# Backend service pointing to GKE nodes
+resource "google_compute_backend_service" "agentvisa_backend" {
+  name                    = "agentvisa-backend"
+  protocol                = "HTTP"
+  port_name               = "http"
+  load_balancing_scheme   = "EXTERNAL"
+  timeout_sec             = 30
+  enable_cdn              = false
+  
+  backend {
+    group = data.google_compute_instance_group.agentvisa_ig[0].self_link
+    balancing_mode = "RATE"
+    max_rate_per_instance = 100
+  }
+  
+  health_checks = [google_compute_health_check.agentvisa_health[0].id]
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+  
+  depends_on = [data.google_compute_instance_group.agentvisa_ig]
+}
+
+# Health check for backend service
+resource "google_compute_health_check" "agentvisa_health" {
+  name               = "agentvisa-health-check"
+  check_interval_sec = 10
+  timeout_sec        = 5
+  healthy_threshold  = 2
+  unhealthy_threshold = 3
+  
+  http_health_check {
+    port               = 30001  # NodePort for web service
+    request_path       = "/_stcore/health"
+    proxy_header       = "NONE"
+  }
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# URL map for routing
+resource "google_compute_url_map" "agentvisa_url_map" {
+  name            = "agentvisa-url-map"
+  default_service = google_compute_backend_service.agentvisa_backend[0].id
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# HTTPS proxy
+resource "google_compute_target_https_proxy" "agentvisa_https_proxy" {
+  name    = "agentvisa-https-proxy"
+  url_map = google_compute_url_map.agentvisa_url_map[0].id
+  ssl_certificates = [google_compute_managed_ssl_certificate.agentvisa_ssl[0].id]
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# HTTP proxy for redirect
+resource "google_compute_target_http_proxy" "agentvisa_http_proxy" {
+  name    = "agentvisa-http-proxy"
+  url_map = google_compute_url_map.agentvisa_redirect[0].id
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# URL map for HTTP to HTTPS redirect
+resource "google_compute_url_map" "agentvisa_redirect" {
+  name = "agentvisa-redirect"
+  
+  default_url_redirect {
+    https_redirect = true
+    strip_query    = false
+  }
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# HTTPS forwarding rule
+resource "google_compute_global_forwarding_rule" "agentvisa_https" {
+  name       = "agentvisa-https-forwarding-rule"
+  target     = google_compute_target_https_proxy.agentvisa_https_proxy[0].id
+  port_range = "443"
+  ip_address = google_compute_global_address.https_lb_ip[0].address
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# HTTP forwarding rule (for redirect)
+resource "google_compute_global_forwarding_rule" "agentvisa_http" {
+  name       = "agentvisa-http-forwarding-rule"
+  target     = google_compute_target_http_proxy.agentvisa_http_proxy[0].id
+  port_range = "80"
+  ip_address = google_compute_global_address.https_lb_ip[0].address
+  
+  # Only create if domain is provided
+  count = var.domain_name != "" ? 1 : 0
+}
+
+# Note: Also keeping simple LoadBalancer service for non-SSL access
 
 # Create namespace
 resource "kubernetes_namespace" "agentVisa" {

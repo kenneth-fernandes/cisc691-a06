@@ -136,6 +136,214 @@ def display_trends_results(trends_response):
             st.metric("Trend", "📉 Retrogressing", delta="Negative")
         else:
             st.metric("Trend", "➡️ Stable", delta="Neutral")
+    
+    # Create advancement chart if data is available
+    advancement_list = analysis.get('advancement_list', [])
+    if advancement_list:
+        st.subheader("📈 Advancement Pattern")
+        
+        # Create a line chart showing advancement over time
+        fig_trend = px.line(
+            x=range(1, len(advancement_list) + 1),
+            y=advancement_list,
+            title="Monthly Advancement Pattern",
+            labels={'x': 'Month', 'y': 'Days Advanced'},
+            markers=True
+        )
+        fig_trend.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="No Movement")
+        fig_trend.update_layout(showlegend=False)
+        st.plotly_chart(fig_trend, use_container_width=True)
+        
+        # Show advancement statistics
+        if advancement_list:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Best Month", f"{max(advancement_list)} days")
+            with col2:
+                st.metric("Worst Month", f"{min(advancement_list)} days")
+            with col3:
+                positive_months = len([x for x in advancement_list if x > 0])
+                st.metric("Positive Months", f"{positive_months}/{len(advancement_list)}")
+    
+    # Show raw analysis data in expandable section
+    with st.expander("📋 Raw Analysis Data"):
+        st.json(analysis)
+
+def display_prediction_results(prediction, category, country):
+    """Display prediction results with visualizations"""
+    st.subheader(f"🔮 Prediction for {category} - {country}")
+    
+    # Display key prediction metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        predicted_date = prediction.get('predicted_date', 'Not available')
+        st.metric("Predicted Date", predicted_date)
+    
+    with col2:
+        confidence = prediction.get('confidence_score', 0)
+        st.metric("Confidence Score", f"{confidence:.2f}%")
+    
+    with col3:
+        prediction_type = prediction.get('prediction_type', 'Unknown')
+        st.metric("Prediction Type", prediction_type)
+    
+    # Display additional prediction details
+    if prediction.get('details'):
+        st.subheader("📊 Prediction Details")
+        details = prediction['details']
+        
+        # Create a simple chart showing prediction confidence
+        fig = go.Figure()
+        fig.add_trace(go.Indicator(
+            mode = "gauge+number",
+            value = confidence,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "Confidence Level"},
+            gauge = {
+                'axis': {'range': [None, 100]},
+                'bar': {'color': "darkgreen"},
+                'steps': [
+                    {'range': [0, 25], 'color': "lightgray"},
+                    {'range': [25, 50], 'color': "yellow"},
+                    {'range': [50, 75], 'color': "orange"},
+                    {'range': [75, 100], 'color': "green"}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': 90
+                }
+            }
+        ))
+        fig.update_layout(height=300)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Show raw prediction data in an expandable section
+    with st.expander("📋 Raw Prediction Data"):
+        st.json(prediction)
+
+def display_database_charts(database_stats):
+    """Display database statistics with charts and visualizations"""
+    
+    # Create overview metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Latest Bulletin", database_stats.get('latest_bulletin', 'None'))
+    
+    with col2:
+        st.metric("Oldest Bulletin", database_stats.get('oldest_bulletin', 'None'))
+    
+    with col3:
+        st.metric("Years Covered", database_stats.get('total_years_covered', 0))
+    
+    # Create data distribution charts
+    st.subheader("📈 Data Distribution")
+    
+    # Create a pie chart showing data breakdown
+    labels = ['Bulletins', 'Category Records', 'Predictions']
+    values = [
+        database_stats.get('bulletin_count', 0),
+        database_stats.get('category_data_count', 0),
+        database_stats.get('prediction_count', 0)
+    ]
+    
+    fig_pie = px.pie(
+        values=values, 
+        names=labels,
+        title="Database Content Distribution",
+        color_discrete_sequence=px.colors.qualitative.Set3
+    )
+    fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+    st.plotly_chart(fig_pie, use_container_width=True)
+    
+    # Create a bar chart showing categories and countries tracked
+    st.subheader("📊 Coverage Statistics")
+    
+    coverage_data = {
+        'Type': ['Categories Tracked', 'Countries Tracked'],
+        'Count': [
+            database_stats.get('categories_tracked', 0),
+            database_stats.get('countries_tracked', 0)
+        ]
+    }
+    
+    fig_bar = px.bar(
+        coverage_data,
+        x='Type',
+        y='Count',
+        title="Categories and Countries Coverage",
+        color='Type',
+        color_discrete_sequence=['#1f77b4', '#ff7f0e']
+    )
+    fig_bar.update_layout(showlegend=False)
+    st.plotly_chart(fig_bar, use_container_width=True)
+    
+    # Show detailed stats in expandable section
+    with st.expander("📋 Detailed Database Statistics"):
+        st.json(database_stats)
+
+def display_historical_charts(df, category, country):
+    """Display historical data with charts and visualizations"""
+    st.subheader(f"📋 Historical Data for {category} - {country}")
+    
+    # Show data table first
+    st.dataframe(df, use_container_width=True)
+    
+    # Try to create timeline charts if date columns exist
+    if 'final_action_date' in df.columns and not df['final_action_date'].isna().all():
+        # Filter out null dates and convert to datetime
+        df_filtered = df[df['final_action_date'].notna()].copy()
+        
+        if not df_filtered.empty:
+            try:
+                df_filtered['final_action_date'] = pd.to_datetime(df_filtered['final_action_date'])
+                df_filtered = df_filtered.sort_values('final_action_date')
+                
+                # Create timeline chart for final action dates
+                fig_timeline = px.line(
+                    df_filtered,
+                    x='final_action_date',
+                    y=range(len(df_filtered)),
+                    title=f"Final Action Date Timeline - {category} {country}",
+                    labels={'y': 'Data Point Index', 'final_action_date': 'Final Action Date'},
+                    markers=True
+                )
+                fig_timeline.update_yaxis(title="Data Point Index")
+                fig_timeline.update_layout(showlegend=False)
+                st.plotly_chart(fig_timeline, use_container_width=True)
+                
+                # Show movement analysis if we have multiple points
+                if len(df_filtered) > 1:
+                    df_filtered['date_advancement'] = df_filtered['final_action_date'].diff().dt.days
+                    advancement_data = df_filtered[df_filtered['date_advancement'].notna()]
+                    
+                    if not advancement_data.empty:
+                        fig_advancement = px.bar(
+                            advancement_data,
+                            x='final_action_date',
+                            y='date_advancement',
+                            title=f"Date Advancement Analysis - {category} {country}",
+                            labels={'date_advancement': 'Days Advanced', 'final_action_date': 'Bulletin Date'},
+                            color='date_advancement',
+                            color_continuous_scale='RdYlGn'
+                        )
+                        st.plotly_chart(fig_advancement, use_container_width=True)
+            
+            except Exception as e:
+                st.warning(f"Could not create timeline chart: {str(e)}")
+    
+    # Show status distribution if available
+    if 'status' in df.columns:
+        status_counts = df['status'].value_counts()
+        if not status_counts.empty:
+            fig_status = px.pie(
+                values=status_counts.values,
+                names=status_counts.index,
+                title=f"Status Distribution - {category} {country}"
+            )
+            st.plotly_chart(fig_status, use_container_width=True)
 
 def render_predictions(api_client):
     """Render predictions section"""
@@ -193,7 +401,7 @@ def render_predictions(api_client):
             prediction = pred_response.get("prediction", {})
             if prediction:
                 st.success("Prediction generated successfully!")
-                st.json(prediction)
+                display_prediction_results(prediction, pred_category, pred_country)
             else:
                 st.warning("No prediction data received")
 
@@ -249,7 +457,7 @@ def render_historical_data(api_client):
             if historical_data:
                 # Convert to DataFrame for better display
                 df = pd.DataFrame(historical_data)
-                st.dataframe(df, use_container_width=True)
+                display_historical_charts(df, hist_category, hist_country)
             else:
                 st.warning("No historical data found for the selected category and country")
 
@@ -285,10 +493,10 @@ def render_database_stats(api_client):
             stats_response.get("year_range", "No data")
         )
     
-    # Display detailed stats
+    # Display detailed stats with charts
     st.subheader("Detailed Statistics")
     database_stats = stats_response.get("database_stats", {})
     if database_stats:
-        st.json(database_stats)
+        display_database_charts(database_stats)
     else:
         st.warning("No detailed statistics available")

@@ -48,20 +48,32 @@ output "cost_optimization_summary" {
   }
 }
 
-output "ingress_ip" {
-  description = "Static IP address for Ingress"
-  value       = google_compute_global_address.ingress_ip.address
+# LoadBalancer IP command (HTTP access)
+output "loadbalancer_ip_command" {
+  description = "Command to get LoadBalancer IP"
+  value       = "kubectl get service web-lb -n visa-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
+}
+
+# HTTPS Load Balancer IP (when domain is configured)
+output "https_ip" {
+  description = "HTTPS Load Balancer IP address"
+  value       = var.domain_name != "" ? google_compute_global_address.https_lb_ip[0].address : "Not created (no domain configured)"
 }
 
 output "access_instructions" {
   description = "Instructions to access the deployed application"
-  value = {
-    get_kubeconfig   = "gcloud container clusters get-credentials ${google_container_cluster.agentVisa_cluster.name} --zone ${var.zone} --project ${var.project_id}"
-    check_pods       = "kubectl get pods -n visa-app"
-    get_services     = "kubectl get services -n visa-app"
-    ingress_ip       = google_compute_global_address.ingress_ip.address
-    setup_dns        = "Point your domain A record to: ${google_compute_global_address.ingress_ip.address}"
-  }
+  value = merge({
+    get_kubeconfig     = "gcloud container clusters get-credentials ${google_container_cluster.agentVisa_cluster.name} --zone ${var.zone} --project ${var.project_id}"
+    check_pods         = "kubectl get pods -n visa-app"
+    get_services       = "kubectl get services -n visa-app"
+    get_loadbalancer_ip = "kubectl get service web-lb -n visa-app"
+    access_app_http    = "Use the EXTERNAL-IP from web-lb service (HTTP)"
+  }, var.domain_name != "" ? {
+    access_app_https   = "https://${var.domain_name} (after DNS setup)"
+    https_ip          = try(google_compute_global_address.https_lb_ip[0].address, "Not created")
+    ssl_cert_status   = "kubectl describe managedcertificate -n visa-app || gcloud compute ssl-certificates describe agentvisa-ssl-cert"
+    dns_setup         = "Point ${var.domain_name} A record to: ${try(google_compute_global_address.https_lb_ip[0].address, "HTTPS_IP")}"
+  } : {})
 }
 
 output "monitoring_commands" {

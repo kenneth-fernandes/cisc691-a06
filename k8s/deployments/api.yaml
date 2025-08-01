@@ -4,7 +4,7 @@ metadata:
   name: api
   namespace: visa-app
 spec:
-  replicas: 1  # Single replica only - no HPA scaling
+  # Replicas managed by HPA (min: 1, max: 2)
   selector:
     matchLabels:
       app: api
@@ -39,9 +39,9 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: postgres-password
-        # PostgreSQL connection URL for VisaDatabase
+        # PostgreSQL connection URL constructed from individual variables
         - name: DATABASE_URL
-          value: "postgresql://admin:password@postgres:5432/app_db"
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:

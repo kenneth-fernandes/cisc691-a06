@@ -77,17 +77,17 @@ variable "artifact_registry_location" {
   default     = "us-central1"
 }
 
-variable "custom_domain" {
-  description = "Custom domain for the application (leave empty for IP-only access)"
+variable "kubernetes_version" {
+  description = "Kubernetes version for GKE cluster"
   type        = string
-  default     = "app.myagentvisa.com"  # Set to your domain like 'myapp.example.com' to enable HTTPS
+  default     = "1.32.6-gke.1096000"
 }
 
 # Cost estimation variables (no Ollama deployment)
 # Ollama removed from GKE for cost optimization
 
 variable "estimated_monthly_cost" {
-  description = "Estimated monthly cost breakdown (no Ollama, 3 nodes)"
+  description = "Estimated monthly cost breakdown (4 nodes, LoadBalancer)"
   type = object({
     cluster_management = string
     nodes_preemptible  = string  
@@ -97,9 +97,20 @@ variable "estimated_monthly_cost" {
   })
   default = {
     cluster_management = "$74.40"    # GKE cluster management fee
-    nodes_preemptible  = "$22.02"    # 3x e2-medium preemptible nodes
-    storage           = "$7.00"      # Persistent disks (database only, no Ollama)
-    networking        = "$5.00"      # Load balancer + egress
-    total_estimated   = "$88.42"     # Total monthly estimate (no Ollama, 3 nodes)
+    nodes_preemptible  = "$29.36"    # 4x e2-medium preemptible nodes
+    storage           = "$7.00"      # Persistent disks (database only)
+    networking        = "$1.46"      # LoadBalancer service
+    total_estimated   = "$112.22"    # Total monthly estimate (4 nodes, LoadBalancer)
+  }
+}
+
+variable "domain_name" {
+  description = "Domain name for SSL certificate and HTTPS access (leave empty for HTTP-only LoadBalancer)"
+  type        = string
+  default     = ""
+  
+  validation {
+    condition = var.domain_name == "" || can(regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.domain_name))
+    error_message = "Domain name must be a valid domain (e.g., app.example.com) or empty string."
   }
 }

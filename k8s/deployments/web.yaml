@@ -4,7 +4,7 @@ metadata:
   name: web
   namespace: visa-app
 spec:
-  replicas: 1  # Single replica only - no HPA scaling
+  # Replicas managed by HPA (min: 1, max: 2)
   selector:
     matchLabels:
       app: web
@@ -25,6 +25,28 @@ spec:
             configMapKeyRef:
               name: app-config
               key: API_BASE_URL
+        - name: POSTGRES_HOST
+          value: postgres
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+        # PostgreSQL connection URL constructed from individual variables
+        - name: DATABASE_URL
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
         - name: PYTHONPATH
           valueFrom:
             configMapKeyRef:

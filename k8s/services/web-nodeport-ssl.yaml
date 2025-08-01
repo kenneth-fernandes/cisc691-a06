@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-nodeport-ssl
+  namespace: visa-app
+  labels:
+    app: web
+spec:
+  type: NodePort
+  ports:
+  - port: 8501
+    targetPort: 8501
+    nodePort: 30001
+    protocol: TCP
+    name: http
+  selector:
+    app: web
