@@ -1,0 +1,211 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: visa-data-collection
+  namespace: visa-app
+  labels:
+    app: visa-data-collector
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: visa-collector
+        image: us-central1-docker.pkg.dev/agent-visa-467603/agentvisa/visa-app-api:latest
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "🌱 Starting visa data collection..."
+          
+          # Wait for PostgreSQL to be ready
+          echo "⏳ Waiting for database connection..."
+          until python -c "
+          import psycopg2
+          import os
+          try:
+              conn = psycopg2.connect(
+                  host=os.getenv('POSTGRES_HOST'),
+                  port=os.getenv('POSTGRES_PORT'),
+                  database=os.getenv('POSTGRES_DB'),
+                  user=os.getenv('POSTGRES_USER'),
+                  password=os.getenv('POSTGRES_PASSWORD')
+              )
+              conn.close()
+              print('Database connection successful')
+          except Exception as e:
+              print(f'Database connection failed: {e}')
+              exit(1)
+          "; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 5
+          done
+          
+          echo "✅ Database connection established"
+          echo "📊 Starting visa data collection (2020-2025)..."
+          
+          # Run the visa data collection
+          cd /app
+          python -c "
+          import sys
+          import os
+          sys.path.append('/app/src')
+          from visa.collection.historical import HistoricalDataCollector
+          from visa.config import VisaConfig
+          from visa.database import VisaDatabase
+          
+          print('🔧 Initializing data collector with PostgreSQL...')
+          
+          # Construct DATABASE_URL for PostgreSQL
+          postgres_host = os.getenv('POSTGRES_HOST')
+          postgres_port = os.getenv('POSTGRES_PORT') 
+          postgres_db = os.getenv('POSTGRES_DB')
+          postgres_user = os.getenv('POSTGRES_USER')
+          postgres_password = os.getenv('POSTGRES_PASSWORD')
+          
+          database_url = f'postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}'
+          os.environ['DATABASE_URL'] = database_url
+          print(f'Database URL set: postgresql://{postgres_user}:****@{postgres_host}:{postgres_port}/{postgres_db}')
+          
+          # Initialize database with PostgreSQL
+          db = VisaDatabase(db_path=None)
+          
+          config = VisaConfig()
+          collector = HistoricalDataCollector(config)
+          
+          print('📊 Starting historical data collection (2020-2025)...')
+          collector.collect_historical_data(start_year=2020, end_year=2025)
+          
+          print('✅ Data collection completed!')
+          "
+          
+          echo "✅ Visa data collection completed!"
+          
+          # Show summary using VisaDatabase
+          python -c "
+          import sys
+          import os
+          sys.path.append('/app/src')
+          from visa.database import VisaDatabase
+          
+          # Construct DATABASE_URL for PostgreSQL
+          postgres_host = os.getenv('POSTGRES_HOST')
+          postgres_port = os.getenv('POSTGRES_PORT')
+          postgres_db = os.getenv('POSTGRES_DB')
+          postgres_user = os.getenv('POSTGRES_USER')
+          postgres_password = os.getenv('POSTGRES_PASSWORD')
+          
+          database_url = f'postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}'
+          os.environ['DATABASE_URL'] = database_url
+          
+          print('📊 Connecting to PostgreSQL for summary...')
+          db = VisaDatabase(db_path=None)
+          
+          import psycopg2
+          conn = psycopg2.connect(
+              host=os.getenv('POSTGRES_HOST'),
+              port=os.getenv('POSTGRES_PORT'), 
+              database=os.getenv('POSTGRES_DB'),
+              user=os.getenv('POSTGRES_USER'),
+              password=os.getenv('POSTGRES_PASSWORD')
+          )
+          
+          with conn.cursor() as cur:
+              cur.execute('SELECT COUNT(*) FROM visa_bulletins')
+              total_bulletins = cur.fetchone()[0]
+              print(f'📊 Total visa bulletin records: {total_bulletins}')
+              
+              cur.execute('SELECT COUNT(*) FROM category_data')
+              total_categories = cur.fetchone()[0]
+              print(f'📊 Total category data records: {total_categories}')
+              
+              if total_bulletins > 0:
+                  cur.execute('SELECT MIN(bulletin_date), MAX(bulletin_date) FROM visa_bulletins')
+                  date_range = cur.fetchone()
+                  print(f'📅 Date range: {date_range[0]} to {date_range[1]}')
+                  
+                  cur.execute('SELECT DISTINCT category FROM category_data ORDER BY category LIMIT 10')
+                  categories = [row[0] for row in cur.fetchall()]
+                  print(f'📂 Categories (first 10): {categories}')
+                  
+                  cur.execute('SELECT DISTINCT country FROM category_data ORDER BY country LIMIT 10')
+                  countries = [row[0] for row in cur.fetchall()]
+                  print(f'🌍 Countries (first 10): {countries}')
+                  
+                  # Show sample India EB-2 data
+                  cur.execute('''
+                      SELECT vb.bulletin_date, cd.final_action_date 
+                      FROM category_data cd
+                      JOIN visa_bulletins vb ON cd.bulletin_id = vb.id
+                      WHERE cd.country = 'India' AND cd.category = 'EB-2'
+                      ORDER BY vb.bulletin_date DESC
+                      LIMIT 3
+                  ''')
+                  india_eb2 = cur.fetchall()
+                  if india_eb2:
+                      print(f'🇮🇳 Recent India EB-2 data:')
+                      for date, action_date in india_eb2:
+                          print(f'   {date}: {action_date}')
+                  else:
+                      print('🇮🇳 No India EB-2 data found')
+          
+          conn.close()
+          "
+        env:
+        # Database configuration
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+        
+        # Redis configuration
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: redis-password
+        
+        # Application configuration
+        - name: PYTHONPATH
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PYTHONPATH
+        - name: DOCKER_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DOCKER_MODE
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"

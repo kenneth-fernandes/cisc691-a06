@@ -18,3 +18,8 @@ data:
   
   # API configuration
   API_BASE_URL: http://api:8000
+  
+  # Note: Ollama removed from GKE deployment for cost optimization
+  # OLLAMA_BASE_URL: http://host.docker.internal:11434  # For local development only
+  # OLLAMA_MODEL: llama3:1b
+  

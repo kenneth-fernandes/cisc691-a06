@@ -45,18 +45,85 @@ else
     exit 1
 fi
 
-# Deploy secrets (you need to update these with your actual API keys)
+# Deploy secrets (with enhanced error handling and validation)
 echo "🔐 Deploying secrets..."
-kubectl apply -f k8s/secrets/app-secrets.yaml
+
+# Check if secrets file exists
+if [ ! -f "k8s/secrets/app-secrets.yaml" ]; then
+    echo "❌ ERROR: app-secrets.yaml not found!"
+    echo "📋 Creating secrets file from template..."
+    
+    if [ -f "k8s/secrets/app-secrets.yaml.template" ]; then
+        cp "k8s/secrets/app-secrets.yaml.template" "k8s/secrets/app-secrets.yaml"
+        echo "⚠️  IMPORTANT: You must update the secrets file with your actual API keys!"
+        echo "📝 Edit: k8s/secrets/app-secrets.yaml"
+        echo "🔧 Replace placeholder values with base64-encoded secrets:"
+        echo "   echo -n 'your_password' | base64"
+        echo "   echo -n 'your_api_key' | base64"
+        echo ""
+        read -p "Have you updated the secrets file with real values? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "❌ Please update the secrets file and run the deployment again"
+            exit 1
+        fi
+    else
+        echo "❌ ERROR: app-secrets.yaml.template not found!"
+        echo "📝 Please create k8s/secrets/app-secrets.yaml with your secrets"
+        exit 1
+    fi
+fi
+
+# Validate secrets file content
+echo "🔍 Validating secrets file..."
+if grep -q "REPLACE_WITH_BASE64_ENCODED" "k8s/secrets/app-secrets.yaml"; then
+    echo "❌ ERROR: Secrets file still contains placeholder values!"
+    echo "📝 Please replace all REPLACE_WITH_BASE64_ENCODED values in:"
+    echo "   k8s/secrets/app-secrets.yaml"
+    echo ""
+    echo "💡 Generate base64 values with:"
+    echo "   echo -n 'your_actual_password' | base64"
+    echo "   echo -n 'your_actual_api_key' | base64"
+    exit 1
+fi
+
+# Apply secrets with comprehensive error handling
+echo "✅ Applying secrets..."
+if ! kubectl apply -f k8s/secrets/app-secrets.yaml; then
+    echo "❌ ERROR: Failed to apply secrets!"
+    echo "🔍 Common issues and solutions:"
+    echo "  1. Invalid YAML syntax - check indentation"
+    echo "  2. Invalid base64 encoding - regenerate with: echo -n 'value' | base64"
+    echo "  3. Namespace not ready - wait a moment and retry"
+    echo ""
+    echo "🔧 Debug commands:"
+    echo "  kubectl apply --dry-run=client -f k8s/secrets/app-secrets.yaml"
+    echo "  ./k8s/validate-secrets.sh"
+    exit 1
+fi
+
+echo "✅ Secrets deployed successfully"
+
+# Verify secrets are properly deployed
+echo "🔍 Verifying secrets deployment..."
+if kubectl get secret app-secrets -n visa-app > /dev/null 2>&1; then
+    echo "✅ Secrets successfully created in cluster"
+    secret_count=$(kubectl get secret app-secrets -n visa-app -o jsonpath='{.data}' | jq -r 'keys | length' 2>/dev/null || echo "unknown")
+    echo "📊 Secret contains $secret_count keys"
+else
+    echo "❌ ERROR: Secrets not found in cluster after deployment"
+    exit 1
+fi
 
 # Deploy config maps
 echo "⚙️  Deploying config maps..."
 kubectl apply -f k8s/configmaps/app-config.yaml
 
-# Deploy persistent volume claims
+# Deploy persistent volume claims (including Ollama model storage)
 echo "💾 Creating storage..."
 kubectl apply -f k8s/volumes/postgres-pvc.yaml
 kubectl apply -f k8s/volumes/redis-pvc.yaml
+kubectl apply -f k8s/volumes/ollama-pvc.yaml
 
 # Deploy database first
 echo "🗄️  Deploying PostgreSQL..."
@@ -106,6 +173,23 @@ if ! kubectl wait --for=condition=ready pod -l app=web -n visa-app --timeout=300
     echo "Deployment may have issues, check logs above..."
 fi
 
+# Deploy Ollama (CPU-only version for local development)
+echo "🤖 Deploying Ollama (CPU-powered)..."
+if kubectl apply -f k8s/deployments/ollama.yaml 2>/dev/null; then
+    kubectl apply -f k8s/services/ollama-service.yaml
+    echo "⏳ Waiting for Ollama to be ready (may take time for model download)..."
+    if ! kubectl wait --for=condition=ready pod -l app=ollama -n visa-app --timeout=480s; then
+        echo "⚠️  Ollama taking longer than expected (likely downloading Llama 3.2 1B model)"
+        echo "💡 This is normal for first deployment. Check status with:"
+        echo "   kubectl logs -f deployment/ollama -n visa-app"
+    else
+        echo "✅ Ollama CPU deployment successful"
+    fi
+else
+    echo "⚠️  Ollama deployment failed"
+    echo "💡 Check resources and try: kubectl describe pod -l app=ollama -n visa-app"
+fi
+
 echo ""
 echo "✅ Deployment completed successfully!"
 echo ""
@@ -120,9 +204,10 @@ echo "   minikube service web -n visa-app"
 echo "   Or get URL: minikube service web -n visa-app --url"
 echo ""
 echo "📝 To view logs:"
-echo "   API logs:  kubectl logs -f deployment/api -n visa-app"
-echo "   Web logs:  kubectl logs -f deployment/web -n visa-app"
-echo "   DB logs:   kubectl logs -f statefulset/postgres -n visa-app"
+echo "   API logs:    kubectl logs -f deployment/api -n visa-app"
+echo "   Web logs:    kubectl logs -f deployment/web -n visa-app"
+echo "   DB logs:     kubectl logs -f statefulset/postgres -n visa-app"
+echo "   Ollama logs: kubectl logs -f deployment/ollama -n visa-app"
 echo ""
 echo "🔍 To check status:"
 echo "   kubectl get all -n visa-app"

@@ -4,7 +4,7 @@ metadata:
   name: api
   namespace: visa-app
 spec:
-  replicas: 2
+  replicas: 1  # Single replica only - no HPA scaling
   selector:
     matchLabels:
       app: api
@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: api
-        image: visa-app-api:latest
-        imagePullPolicy: Never
+        image: us-central1-docker.pkg.dev/agent-visa-467603/agentvisa/visa-app-api:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:
@@ -39,6 +39,9 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: postgres-password
+        # PostgreSQL connection URL for VisaDatabase
+        - name: DATABASE_URL
+          value: "postgresql://admin:password@postgres:5432/app_db"
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -86,18 +89,31 @@ spec:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 45   # Allow more time for AI models to load
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 12      # Allow 2 minutes for startup
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "512Mi"   # Adequate for AI workload
+            cpu: "200m"       # Baseline CPU
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "1Gi"     # Allow bursting for AI processing
+            cpu: "500m"       # Allow CPU bursting

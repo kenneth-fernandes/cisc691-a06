@@ -1,0 +1,178 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: visa-data-sync
+  namespace: visa-app
+  labels:
+    app: visa-data-sync
+spec:
+  # Run daily at 2 AM UTC (when US visa bulletin updates typically happen)
+  schedule: "0 2 * * *"
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid  # Don't run concurrent jobs
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  startingDeadlineSeconds: 3600  # 1 hour deadline
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: visa-sync
+            image: us-central1-docker.pkg.dev/agent-visa-467603/agentvisa/visa-app-api:latest
+            command: ["/bin/sh"]
+            args:
+            - -c
+            - |
+              echo "🌱 Starting daily visa data synchronization..."
+              
+              # Wait for PostgreSQL to be ready
+              echo "⏳ Waiting for database connection..."
+              until python -c "
+              import psycopg2
+              import os
+              try:
+                  conn = psycopg2.connect(
+                      host=os.getenv('POSTGRES_HOST'),
+                      port=os.getenv('POSTGRES_PORT'),
+                      database=os.getenv('POSTGRES_DB'),
+                      user=os.getenv('POSTGRES_USER'),
+                      password=os.getenv('POSTGRES_PASSWORD')
+                  )
+                  conn.close()
+                  print('Database connection successful')
+              except Exception as e:
+                  print(f'Database connection failed: {e}')
+                  exit(1)
+              "; do
+                echo "Waiting for PostgreSQL to be ready..."
+                sleep 5
+              done
+              
+              echo "✅ Database connection established"
+              echo "📊 Starting daily visa data synchronization..."
+              
+              # Run the visa data synchronization (recent data only)
+              cd /app
+              python -c "
+              import sys
+              import os
+              from datetime import datetime, timedelta
+              sys.path.append('/app/src')
+              from visa.collection.monthly import MonthlyDataCollector
+              from visa.config import VisaConfig
+              
+              # Construct DATABASE_URL for PostgreSQL
+              postgres_host = os.getenv('POSTGRES_HOST')
+              postgres_port = os.getenv('POSTGRES_PORT') 
+              postgres_db = os.getenv('POSTGRES_DB')
+              postgres_user = os.getenv('POSTGRES_USER')
+              postgres_password = os.getenv('POSTGRES_PASSWORD')
+              
+              database_url = f'postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}'
+              os.environ['DATABASE_URL'] = database_url
+              print(f'Database URL set for daily sync')
+              
+              print('🔧 Initializing monthly data collector...')
+              config = VisaConfig()
+              collector = MonthlyDataCollector(config)
+              
+              # Collect current month and previous month data
+              current_date = datetime.now()
+              current_year = current_date.year
+              current_month = current_date.month
+              
+              print(f'📊 Syncing current period: {current_year}-{current_month:02d}')
+              
+              try:
+                  # Try monthly collector first, fall back to historical if needed
+                  try:
+                      collector.collect_current_month()
+                      print('✅ Monthly data sync completed!')
+                  except Exception as monthly_error:
+                      print(f'Monthly collector failed: {monthly_error}')
+                      # Fallback to historical collector for recent data
+                      from visa.collection.historical import HistoricalDataCollector
+                      historical_collector = HistoricalDataCollector(config)
+                      historical_collector.collect_historical_data(start_year=current_year, end_year=current_year)
+                      print('✅ Fallback historical sync completed!')
+                  
+                  # Show summary of data
+                  import psycopg2
+                  conn = psycopg2.connect(database_url)
+                  with conn.cursor() as cur:
+                      cur.execute('SELECT COUNT(*) FROM visa_bulletins')
+                      bulletins = cur.fetchone()[0]
+                      cur.execute('SELECT COUNT(*) FROM category_data')
+                      categories = cur.fetchone()[0]
+                      print(f'📊 Database summary: {bulletins} bulletins, {categories} category records')
+                  conn.close()
+                  
+              except Exception as e:
+                  print(f'❌ Daily sync failed: {e}')
+                  import traceback
+                  traceback.print_exc()
+                  exit(1)
+              "
+              
+              echo "✅ Daily visa data synchronization completed!"
+              
+            env:
+            # Database configuration
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-password
+            
+            # Redis configuration
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: redis-password
+            
+            # Application configuration
+            - name: PYTHONPATH
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: PYTHONPATH
+            - name: DOCKER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DOCKER_MODE
+            
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "200m"

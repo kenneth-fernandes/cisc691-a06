@@ -1,0 +1,113 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentvisa-ingress
+  namespace: visa-app
+  annotations:
+    # Use Google Cloud Load Balancer
+    kubernetes.io/ingress.class: "gce"
+    # Enable Google-managed SSL certificate
+    networking.gke.io/managed-certificates: "agentvisa-ssl-cert"
+    # Use static IP reserved in Terraform
+    kubernetes.io/ingress.global-static-ip-name: "agentvisa-ingress-ip"
+    # Redirect HTTP to HTTPS
+    networking.gke.io/load-balancer-type: "External"
+    # Add security headers
+    ingress.gcp.kubernetes.io/pre-shared-cert: "agentvisa-ssl-cert"
+spec:
+  rules:
+  - host: app.agentvisa.com
+    http:
+      paths:
+      - path: /api/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8501
+  - host: app.agentvisa.com
+    http:
+      paths:
+      - path: /api/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8501
+  - host: app.agentvisa.com
+    http:
+      paths:
+      - path: /api/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8501
+  # Domain-based routing (when custom domain is configured)
+  - host: app.agentvisa.com
+    http:
+      paths:
+      - path: /api/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8501
+  # Default rule (IP-based access when no domain)
+  - http:
+      paths:
+      - path: /api/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 8501
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: agentvisa-ssl-cert
+  namespace: visa-app
+spec:
+  domains:
+    - "app.agentvisa.com"
