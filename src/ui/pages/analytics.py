@@ -176,30 +176,53 @@ def display_prediction_results(prediction, category, country):
     # Display key prediction metrics
     col1, col2, col3 = st.columns(3)
     
+    # Extract data from the API response structure
+    predictions_list = prediction.get('predictions', [])
+    confidence_data = prediction.get('confidence', {})
+    methodology = prediction.get('methodology', 'Unknown')
+    
     with col1:
-        predicted_date = prediction.get('predicted_date', 'Not available')
-        st.metric("Predicted Date", predicted_date)
+        # Show next month's prediction if available
+        if predictions_list:
+            pred_advancement = predictions_list[0].get('predicted_advancement', 0)
+            predicted_date = f"{pred_advancement:+d} days" if pred_advancement != 0 else "No movement"
+        else:
+            predicted_date = 'Not available'
+        st.metric("Predicted Movement", predicted_date)
     
     with col2:
-        confidence = prediction.get('confidence_score', 0)
-        st.metric("Confidence Score", f"{confidence:.2f}%")
+        confidence_score = confidence_data.get('score', 0)
+        st.metric("Confidence Score", f"{confidence_score:.1f}%")
     
     with col3:
-        prediction_type = prediction.get('prediction_type', 'Unknown')
-        st.metric("Prediction Type", prediction_type)
+        st.metric("Prediction Type", methodology.replace('_', ' ').title())
     
-    # Display additional prediction details
-    if prediction.get('details'):
+    # Display additional prediction details and visualizations
+    if predictions_list and len(predictions_list) > 0:
         st.subheader("📊 Prediction Details")
-        details = prediction['details']
         
-        # Create a simple chart showing prediction confidence
+        # Show all predictions if multiple months
+        if len(predictions_list) > 1:
+            st.subheader("📈 Multi-Month Predictions")
+            pred_data = []
+            for i, pred in enumerate(predictions_list):
+                pred_data.append({
+                    'Month': i + 1,
+                    'Predicted Days': pred.get('predicted_advancement', 0),
+                    'Range Low': pred.get('range_low', 0),
+                    'Range High': pred.get('range_high', 0)
+                })
+            
+            pred_df = pd.DataFrame(pred_data)
+            st.dataframe(pred_df, use_container_width=True)
+        
+        # Create a gauge chart for confidence
         fig = go.Figure()
         fig.add_trace(go.Indicator(
             mode = "gauge+number",
-            value = confidence,
+            value = confidence_score,
             domain = {'x': [0, 1], 'y': [0, 1]},
-            title = {'text': "Confidence Level"},
+            title = {'text': "Confidence Level (%)"},
             gauge = {
                 'axis': {'range': [None, 100]},
                 'bar': {'color': "darkgreen"},
@@ -218,8 +241,27 @@ def display_prediction_results(prediction, category, country):
         ))
         fig.update_layout(height=300)
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Show confidence factors if available
+        confidence_factors = confidence_data.get('factors', {})
+        if confidence_factors:
+            st.subheader("🎯 Confidence Factors")
+            factors_col1, factors_col2 = st.columns(2)
+            
+            with factors_col1:
+                st.metric("Data Points", confidence_factors.get('data_points', 'N/A'))
+                st.metric("Consistency", f"{confidence_factors.get('consistency', 0):.1f}")
+            
+            with factors_col2:
+                st.metric("Volatility", f"{confidence_factors.get('volatility', 0):.1f}")
+                st.metric("Recent Stability", f"{confidence_factors.get('recent_stability', 0):.1f}")
     
-    # Show raw prediction data in an expandable section
+    # Show disclaimer
+    disclaimer = prediction.get('disclaimer', '')
+    if disclaimer:
+        st.info(f"ℹ️ {disclaimer}")
+    
+    # Show raw prediction data in expandable section
     with st.expander("📋 Raw Prediction Data"):
         st.json(prediction)
 
