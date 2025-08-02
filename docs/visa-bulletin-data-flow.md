@@ -7,7 +7,7 @@ This document provides comprehensive diagrams and documentation of how the Agent
 
 ```mermaid
 flowchart LR
-    A[🌐 State Dept Website] --> B[📥 Web Scraper & Parser]
+    A[🌐 State Dept Website] --> B[📥 Web Scraper and Parser]
     B --> C[🔍 Data Validator]
     C --> D[💾 PostgreSQL/SQLite]
     D --> E[🤖 AI Agent System]
@@ -15,11 +15,11 @@ flowchart LR
     D --> G[🔌 REST API]
     D --> H[📊 Analytics Engine]
     
-    classDef source fill:#e3f2fd
-    classDef process fill:#f3e5f5
-    classDef storage fill:#e8f5e8
-    classDef ai fill:#fce4ec
-    classDef app fill:#fff3e0
+    classDef source fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef process fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef storage fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    classDef ai fill:#9c27b0,stroke:#6a1b9a,stroke-width:3px,color:#ffffff
+    classDef app fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
     
     class A source
     class B,C,H process
@@ -51,7 +51,7 @@ flowchart TD
     
     %% Data Processing Pipeline
     subgraph PROCESSING["Data Processing Pipeline"]
-        DATE_EXTRACTOR[BulletinDateExtractor<br/>Extract dates & fiscal years]
+        DATE_EXTRACTOR[BulletinDateExtractor<br/>Extract dates and fiscal years]
         TABLE_PARSER[BulletinTableParser<br/>Parse HTML tables]
         VALIDATOR[BulletinValidator<br/>Data validation]
         CLEANER[DataCleaner<br/>Data normalization]
@@ -145,15 +145,15 @@ flowchart TD
     CORE --> GOOGLE
     CORE --> OLLAMA
     
-    %% Styling with professional colors
-    classDef external fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef collection fill:#f3e5f5,stroke:#c2185b,stroke-width:2px
-    classDef processing fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef storage fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef analytics fill:#fce4ec,stroke:#e91e63,stroke-width:2px
-    classDef agent fill:#f1f8e9,stroke:#689f38,stroke-width:2px
-    classDef api fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef frontend fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    %% Styling with high-contrast, vibrant colors
+    classDef external fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef collection fill:#c2185b,stroke:#ad1457,stroke-width:3px,color:#ffffff
+    classDef processing fill:#388e3c,stroke:#2e7d32,stroke-width:3px,color:#ffffff
+    classDef storage fill:#f57c00,stroke:#ef6c00,stroke-width:3px,color:#ffffff
+    classDef analytics fill:#e91e63,stroke:#c2185b,stroke-width:3px,color:#ffffff
+    classDef agent fill:#689f38,stroke:#558b2f,stroke-width:3px,color:#ffffff
+    classDef api fill:#00695c,stroke:#004d40,stroke-width:3px,color:#ffffff
+    classDef frontend fill:#3f51b5,stroke:#303f9f,stroke-width:3px,color:#ffffff
     
     class STATE_DEPT,OPENAI,ANTHROPIC,GOOGLE,OLLAMA external
     class MONTHLY,HISTORICAL,SCRAPER,PARSER collection

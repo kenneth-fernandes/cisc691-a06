@@ -238,10 +238,10 @@ graph TB
     end
     
     subgraph "LLM Providers"
-        OPENAI[OpenAI GPT<br/>gpt-4, gpt-3.5-turbo]
+        OPENAI[OpenAI GPT<br/>gpt-4 and gpt-3.5-turbo]
         ANTHROPIC[Anthropic Claude<br/>claude-3.5-sonnet]
         GOOGLE[Google Gemini<br/>gemini-1.5-flash]
-        OLLAMA[Ollama Local<br/>llama-3.2, phi-3]
+        OLLAMA[Ollama Local<br/>llama-3.2 and phi-3]
     end
     
     subgraph "Database Technologies"
@@ -259,8 +259,8 @@ graph TB
     end
     
     subgraph "Infrastructure & DevOps"
-        DOCKER[Docker & Docker Compose<br/>Containerization]
-        K8S[Kubernetes (GKE)<br/>Orchestration]
+        DOCKER[Docker and Docker Compose<br/>Containerization]
+        K8S[Kubernetes GKE<br/>Orchestration]
         TERRAFORM[Terraform<br/>Infrastructure as Code]
         PYTEST[pytest<br/>Testing Framework]
     end
@@ -680,44 +680,44 @@ graph TB
 flowchart TD
     START([Start Deployment]) --> MINIKUBE_CHECK{Minikube Running?}
     MINIKUBE_CHECK -->|No| START_MINIKUBE[minikube start]
-    MINIKUBE_CHECK -->|Yes| DOCKER_ENV[eval $(minikube docker-env)]
+    MINIKUBE_CHECK -->|Yes| DOCKER_ENV[Set Docker Environment]
     START_MINIKUBE --> DOCKER_ENV
     
     DOCKER_ENV --> BUILD_IMAGES[Build Docker Images]
-    BUILD_IMAGES --> BUILD_API[docker build -f Dockerfile.api -t visa-app-api:latest .]
-    BUILD_IMAGES --> BUILD_WEB[docker build -f Dockerfile.web -t visa-app-web:latest .]
+    BUILD_IMAGES --> BUILD_API[Build API Container]
+    BUILD_IMAGES --> BUILD_WEB[Build Web Container]
     
     BUILD_API --> DEPLOY_INFRA[Deploy Infrastructure]
     BUILD_WEB --> DEPLOY_INFRA
     
-    DEPLOY_INFRA --> CREATE_NS[kubectl apply -f k8s/namespace.yaml]
-    CREATE_NS --> DEPLOY_SECRETS[kubectl apply -f k8s/secrets/]
-    DEPLOY_SECRETS --> DEPLOY_CONFIG[kubectl apply -f k8s/configmaps/]
-    DEPLOY_CONFIG --> DEPLOY_STORAGE[kubectl apply -f k8s/volumes/]
+    DEPLOY_INFRA --> CREATE_NS[Create Namespace]
+    CREATE_NS --> DEPLOY_SECRETS[Deploy Secrets]
+    DEPLOY_SECRETS --> DEPLOY_CONFIG[Deploy Config Maps]
+    DEPLOY_CONFIG --> DEPLOY_STORAGE[Deploy Storage Volumes]
     
     DEPLOY_STORAGE --> DEPLOY_DB[Deploy Database Layer]
-    DEPLOY_DB --> PG_DEPLOY[kubectl apply -f k8s/deployments/postgres.yaml]
-    PG_DEPLOY --> PG_SERVICE[kubectl apply -f k8s/services/postgres-service.yaml]
-    PG_SERVICE --> PG_WAIT[kubectl wait --for=condition=ready pod -l app=postgres]
+    DEPLOY_DB --> PG_DEPLOY[Deploy PostgreSQL]
+    PG_DEPLOY --> PG_SERVICE[Create PostgreSQL Service]
+    PG_SERVICE --> PG_WAIT[Wait for PostgreSQL Ready]
     
     PG_WAIT --> DEPLOY_CACHE[Deploy Cache Layer]
-    DEPLOY_CACHE --> REDIS_DEPLOY[kubectl apply -f k8s/deployments/redis.yaml]
-    REDIS_DEPLOY --> REDIS_SERVICE[kubectl apply -f k8s/services/redis-service.yaml]
-    REDIS_SERVICE --> REDIS_WAIT[kubectl wait --for=condition=ready pod -l app=redis]
+    DEPLOY_CACHE --> REDIS_DEPLOY[Deploy Redis Cache]
+    REDIS_DEPLOY --> REDIS_SERVICE[Create Redis Service]
+    REDIS_SERVICE --> REDIS_WAIT[Wait for Redis Ready]
     
     REDIS_WAIT --> DEPLOY_APP[Deploy Application Layer]
-    DEPLOY_APP --> API_DEPLOY[kubectl apply -f k8s/deployments/api.yaml]
-    API_DEPLOY --> API_SERVICE[kubectl apply -f k8s/services/api-service.yaml]
-    API_SERVICE --> API_WAIT[kubectl wait --for=condition=ready pod -l app=api]
+    DEPLOY_APP --> API_DEPLOY[Deploy API Service]
+    API_DEPLOY --> API_SERVICE[Create API Service]
+    API_SERVICE --> API_WAIT[Wait for API Ready]
     
-    API_WAIT --> WEB_DEPLOY[kubectl apply -f k8s/deployments/web.yaml]
-    WEB_DEPLOY --> WEB_SERVICE[kubectl apply -f k8s/services/web-service.yaml]
-    WEB_SERVICE --> WEB_WAIT[kubectl wait --for=condition=ready pod -l app=web]
+    API_WAIT --> WEB_DEPLOY[Deploy Web Service]
+    WEB_DEPLOY --> WEB_SERVICE[Create Web Service]
+    WEB_SERVICE --> WEB_WAIT[Wait for Web Ready]
     
     WEB_WAIT --> VERIFY[Verify Deployment]
-    VERIFY --> CHECK_PODS[kubectl get pods -n visa-app]
-    CHECK_PODS --> CHECK_SERVICES[kubectl get services -n visa-app]
-    CHECK_SERVICES --> ACCESS_APP[minikube service web -n visa-app]
+    VERIFY --> CHECK_PODS[Check Pod Status]
+    CHECK_PODS --> CHECK_SERVICES[Check Service Status]
+    CHECK_SERVICES --> ACCESS_APP[Access Application]
     ACCESS_APP --> END([Deployment Complete])
     
     %% Error handling
