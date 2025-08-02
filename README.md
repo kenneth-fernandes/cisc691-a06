@@ -9,9 +9,11 @@ AgentVisa is a containerized AI assistant with REST API backend that provides in
 - [✨ Features](#-features)
 - [🚀 Quick Start](#-quick-start)
 - [🐳 Docker Services](#-docker-services)
+- [📊 Data Collection & Processing](#-data-collection--processing)
 - [🧪 Testing](#-testing)
 - [🛠️ Troubleshooting](#️-troubleshooting)
-- [📊 Architecture & Documentation](#-system-architecture--documentation)
+- [📊 System Architecture & Documentation](#-system-architecture--documentation)
+- [🎯 Visual System Overview](#-visual-system-overview)
 - [📝 Project Information](#-project-information)
 
 ## ✨ Features
@@ -56,6 +58,10 @@ AgentVisa is a containerized AI assistant with REST API backend that provides in
 - Git for cloning
 
 ### 🔒 Recommended: Secure GKE Deployment (Production)
+
+![GKE Cloud Architecture](docs/images/gke-cloud-architecture.png)
+
+*Production-ready Google Kubernetes Engine deployment with load balancing, SSL certificates, and auto-scaling.*
 
 Deploy to Google Cloud with HTTPS, autoscaling, and enterprise security:
 
@@ -120,6 +126,10 @@ minikube service web -n visa-app
 **→ See [docs/kubernetes-deployment.md](docs/kubernetes-deployment.md)**
 
 ### 🐳 Alternative: Docker Compose
+
+![Local Docker Deployment](docs/images/local-docker-deployment.png)
+
+*Local development environment with Docker Compose orchestrating 4 microservices.*
 
 ```bash
 # 1. Clone and setup
@@ -226,6 +236,10 @@ PYTHONPATH=src                                   # Python module path
 - Automatic schema creation and persistent volumes
 
 ## 📊 Data Collection & Processing
+
+![Visa Data Fetching](docs/images/visa-data-fetching.png)
+
+*Automated visa bulletin data collection pipeline from US State Department through validation to database storage.*
 
 ### Visa Bulletin Data Sources
 The system automatically collects and processes visa bulletin data from:
@@ -415,6 +429,7 @@ kubectl describe managedcertificate agentvisa-ssl-cert -n visa-app
 ## 📊 System Architecture & Documentation
 
 ### 🏗️ Architecture & Design
+- **[🎯 Visual System Overview](#-visual-system-overview)** - Custom draw.io diagrams showing application workflow and system infrastructure
 - **[🏛️ Complete System Architecture](docs/workflow-diagrams.md)** - Comprehensive system architecture, agent workflows, and component interactions
 - **[🔄 Data Flow Architecture](docs/visa-bulletin-data-flow.md)** - Visa bulletin data processing pipeline and AI agent integration
 - **[☁️ GKE Production Deployment](docs/gke-architecture-diagram.md)** - Google Kubernetes Engine architecture and scaling strategy
@@ -430,113 +445,36 @@ kubectl describe managedcertificate agentvisa-ssl-cert -n visa-app
 - **[📊 Data Collection](docs/data-collection.md)** - Historical data collection, validation, and setup guides
 - **[📡 Communication Analysis](docs/websocket-analysis.md)** - HTTP/WebSocket communication patterns
 
-### Complete System Architecture
+## 🎯 Visual System Overview
 
-```mermaid
-graph TB
-    subgraph "User Interface Layer"
-        UI[Streamlit Main App<br/>src/main.py]
-        CHAT[Chat Interface<br/>ui/pages/chat.py]
-        ANALYTICS[Analytics Dashboard<br/>ui/pages/analytics.py]
-        PRED[Visa Predictions<br/>ui/pages/visa_prediction.py]
-        SIDEBAR[Navigation Sidebar<br/>ui/components/sidebar.py]
-    end
-    
-    subgraph "API Gateway Layer"
-        API[FastAPI Backend<br/>api/main.py]
-        AGENT_ROUTER[Agent Router<br/>api/routers/agent.py]
-        ANALYTICS_ROUTER[Analytics Router<br/>api/routers/analytics.py]
-        CACHE_MW[Cache Middleware<br/>api/middleware/cache_middleware.py]
-    end
-    
-    subgraph "AI Agent System"
-        FACTORY[Agent Factory<br/>agent/factory.py]
-        CORE[Multi-LLM Agent Core<br/>agent/core.py]
-        TOOLS[Visa Analytics Tools<br/>agent/visa_tools.py]
-        EXPERTISE[Visa Expert System<br/>agent/visa_expertise.py]
-        BRIDGE[Data Bridge<br/>agent/data_bridge.py]
-    end
-    
-    subgraph "Data Processing Pipeline"
-        PARSER[Web Scraper & Parser<br/>visa/parser.py]
-        VALIDATOR[Data Validator<br/>visa/validators.py]
-        ANALYTICS_ENGINE[Analytics Engine<br/>visa/analytics.py]
-        ML_PREDICTOR[ML Predictor<br/>visa/predictor.py]
-        REPO[Repository Layer<br/>visa/repository.py]
-    end
-    
-    subgraph "Storage & Cache Layer"
-        PG[(PostgreSQL<br/>Primary Database)]
-        SQLITE[(SQLite<br/>Fallback Database)]
-        REDIS[(Redis Cache<br/>Performance Layer)]
-    end
-    
-    subgraph "External Services"
-        STATE_DEPT[US State Department<br/>travel.state.gov]
-        OPENAI[OpenAI GPT<br/>gpt-4, gpt-3.5-turbo]
-        ANTHROPIC[Anthropic Claude<br/>claude-3.5-sonnet]
-        GOOGLE[Google Gemini<br/>gemini-1.5-flash]
-        OLLAMA[Ollama Local<br/>llama-3.2]
-    end
-    
-    %% User Interface Flow
-    UI --> CHAT
-    UI --> ANALYTICS
-    UI --> PRED
-    UI --> SIDEBAR
-    
-    %% API Communication
-    CHAT --> API
-    ANALYTICS --> API
-    PRED --> API
-    
-    %% API Routing
-    API --> AGENT_ROUTER
-    API --> ANALYTICS_ROUTER
-    API --> CACHE_MW
-    
-    %% Agent System Flow
-    AGENT_ROUTER --> FACTORY
-    FACTORY --> CORE
-    CORE --> TOOLS
-    CORE --> EXPERTISE
-    TOOLS --> BRIDGE
-    
-    %% Data Processing Flow
-    PARSER --> STATE_DEPT
-    PARSER --> VALIDATOR
-    VALIDATOR --> REPO
-    BRIDGE --> ANALYTICS_ENGINE
-    ANALYTICS_ENGINE --> ML_PREDICTOR
-    ANALYTICS_ENGINE --> REPO
-    ML_PREDICTOR --> REPO
-    
-    %% Storage Connections
-    REPO --> PG
-    REPO --> SQLITE
-    CACHE_MW --> REDIS
-    
-    %% External AI Services
-    CORE --> OPENAI
-    CORE --> ANTHROPIC
-    CORE --> GOOGLE
-    CORE --> OLLAMA
-    
-    %% Styling with distinct, professional colors
-    classDef ui fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
-    classDef api fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    classDef agent fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
-    classDef data fill:#7b1fa2,stroke:#4a148c,stroke-width:3px,color:#ffffff
-    classDef storage fill:#607d8b,stroke:#455a64,stroke-width:3px,color:#ffffff
-    classDef external fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
-    
-    class UI,CHAT,ANALYTICS,PRED,SIDEBAR ui
-    class API,AGENT_ROUTER,ANALYTICS_ROUTER,CACHE_MW api
-    class FACTORY,CORE,TOOLS,EXPERTISE,BRIDGE agent
-    class PARSER,VALIDATOR,ANALYTICS_ENGINE,ML_PREDICTOR,REPO data
-    class PG,SQLITE,REDIS storage
-    class STATE_DEPT,OPENAI,ANTHROPIC,GOOGLE,OLLAMA external
-```
+### Application Workflow
+![Application Workflow](docs/images/application-workflow.png)
+
+*AgentVisa application workflow showing user interactions, AI agent processing, and system responses.*
+
+### Deployment & Infrastructure Diagrams
+
+<table>
+<tr>
+<td width="50%">
+<h4>🐳 Local Docker Deployment</h4>
+<img src="docs/images/local-docker-deployment.png" alt="Local Docker Deployment" width="100%">
+<p><em>Docker Compose microservices architecture for local development</em></p>
+</td>
+<td width="50%">
+<h4>☁️ GKE Cloud Architecture</h4>
+<img src="docs/images/gke-cloud-architecture.png" alt="GKE Cloud Architecture" width="100%">
+<p><em>Production Google Kubernetes Engine deployment with scaling</em></p>
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+<h4>📊 Visa Data Fetching Pipeline</h4>
+<img src="docs/images/visa-data-fetching.png" alt="Visa Data Fetching" width="70%">
+<p><em>Automated data collection pipeline from US State Department through validation to database storage</em></p>
+</td>
+</tr>
+</table>
 
 ## 📝 Project Information
 
