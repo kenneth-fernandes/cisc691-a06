@@ -214,65 +214,105 @@ journey
 | **Visa Tools** | - | - | Data Provider | ✓ | SQL Queries |
 | **Database** | - | - | - | Data Storage | ✓ |
 
-## Technology Stack Overview
+## Complete Technology Stack
 
 ```mermaid
-graph LR
-    subgraph "Frontend"
-        ST[Streamlit 1.28+]
-        HTML[HTML/CSS/JS]
+graph TB
+    subgraph "Frontend Technologies"
+        ST[Streamlit 1.28+<br/>Multi-page UI Framework]
+        PLOTLY[Plotly 5.15+<br/>Interactive Charts]
+        HTML[HTML/CSS/JS<br/>Custom Styling]
     end
     
-    subgraph "Backend"
-        FA[FastAPI 0.104+]
-        UV[Uvicorn ASGI]
+    subgraph "Backend Technologies"
+        FA[FastAPI 0.100+<br/>REST API Framework]
+        UV[Uvicorn ASGI<br/>Production Server]
+        PYDANTIC[Pydantic 2.0+<br/>Data Validation]
     end
     
-    subgraph "AI/ML"
-        LC[LangChain 0.1+]
-        OPENAI[OpenAI GPT]
-        ANTHROPIC[Claude]
-        GOOGLE[Gemini]
-        OLLAMA[Ollama Local]
+    subgraph "AI/ML Technologies"
+        LC[LangChain 0.1+<br/>Agent Framework]
+        SKLEARN[scikit-learn 1.3+<br/>ML Models]
+        NUMPY[NumPy 1.24+<br/>Numerical Computing]
+        PANDAS[Pandas 2.0+<br/>Data Processing]
     end
     
-    subgraph "Database"
-        PG[PostgreSQL]
-        SL[SQLite]
-        CACHE[Redis Cache]
+    subgraph "LLM Providers"
+        OPENAI[OpenAI GPT<br/>gpt-4, gpt-3.5-turbo]
+        ANTHROPIC[Anthropic Claude<br/>claude-3.5-sonnet]
+        GOOGLE[Google Gemini<br/>gemini-1.5-flash]
+        OLLAMA[Ollama Local<br/>llama-3.2, phi-3]
     end
     
-    subgraph "Infrastructure"
-        DOCKER[Docker Compose]
-        NGINX[Nginx Proxy]
+    subgraph "Database Technologies"
+        PG[PostgreSQL 15<br/>Primary Database]
+        SQLITE[SQLite<br/>Development/Fallback]
+        REDIS[Redis 7.0<br/>Caching Layer]
+        PSYCOPG[psycopg2-binary<br/>PostgreSQL Driver]
     end
     
+    subgraph "Data Processing"
+        BS4[BeautifulSoup4<br/>Web Scraping]
+        REQUESTS[Requests<br/>HTTP Client]
+        PYPDF[PyPDF2<br/>PDF Processing]
+        LXML[LXML<br/>XML/HTML Parser]
+    end
+    
+    subgraph "Infrastructure & DevOps"
+        DOCKER[Docker & Docker Compose<br/>Containerization]
+        K8S[Kubernetes (GKE)<br/>Orchestration]
+        TERRAFORM[Terraform<br/>Infrastructure as Code]
+        PYTEST[pytest<br/>Testing Framework]
+    end
+    
+    %% Technology connections
     ST --> FA
+    ST --> PLOTLY
+    FA --> PYDANTIC
+    FA --> UV
     FA --> LC
+    
     LC --> OPENAI
-    LC --> ANTHROPIC
+    LC --> ANTHROPIC  
     LC --> GOOGLE
     LC --> OLLAMA
+    LC --> SKLEARN
+    
     FA --> PG
-    FA --> SL
-    FA --> CACHE
+    FA --> SQLITE
+    FA --> REDIS
+    PG --> PSYCOPG
+    
+    LC --> BS4
+    BS4 --> REQUESTS
+    BS4 --> PYPDF
+    BS4 --> LXML
+    
+    SKLEARN --> NUMPY
+    SKLEARN --> PANDAS
+    
     DOCKER --> ST
     DOCKER --> FA
     DOCKER --> PG
-    NGINX --> DOCKER
+    DOCKER --> REDIS
+    K8S --> DOCKER
     
-    %% Styling with vibrant contrasting colors
-    classDef frontend fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    classDef backend fill:#c62828,stroke:#b71c1c,stroke-width:3px,color:#ffffff
-    classDef aiml fill:#1565c0,stroke:#0d47a1,stroke-width:3px,color:#ffffff
-    classDef database fill:#6a1b9a,stroke:#4a148c,stroke-width:3px,color:#ffffff
-    classDef infrastructure fill:#ef6c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    %% Styling with professional colors
+    classDef frontend fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef backend fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef aiml fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    classDef llm fill:#9c27b0,stroke:#6a1b9a,stroke-width:3px,color:#ffffff
+    classDef database fill:#607d8b,stroke:#455a64,stroke-width:3px,color:#ffffff
+    classDef processing fill:#795548,stroke:#5d4037,stroke-width:3px,color:#ffffff
+    classDef infrastructure fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
     
-    class ST,HTML frontend
-    class FA,UV backend
-    class LC,OPENAI,ANTHROPIC,GOOGLE,OLLAMA aiml
-    class PG,SL,CACHE database
-    class DOCKER,NGINX infrastructure
+    class ST,PLOTLY,HTML frontend
+    class FA,UV,PYDANTIC backend
+    class LC,SKLEARN,NUMPY,PANDAS aiml
+    class OPENAI,ANTHROPIC,GOOGLE,OLLAMA llm
+    class PG,SQLITE,REDIS,PSYCOPG database
+    class BS4,REQUESTS,PYPDF,LXML processing
+    class DOCKER,K8S,TERRAFORM,PYTEST infrastructure
 ```
 
 ## Database Schema Visualization
