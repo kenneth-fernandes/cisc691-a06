@@ -84,8 +84,13 @@ logs/
 
 data/
 
+# Backup files
+*.bak
+*.tmp
+*.swp
+
 # Kubernetes secrets (contains real API keys and passwords)
-/k8s/secrets/app-secrets.yaml
+k8s/secrets/app-secrets.yaml
 
 # Terraform sensitive files
 terraform/terraform.tfvars
@@ -100,3 +105,27 @@ terraform/.terraform.d/
 # Local development override files
 docker-compose.override.yml
 docker-compose.local.yml
+
+# Python
+__pycache__/
+*.pyc
+
+# Env secrets
+.env
+.env.*
+
+# Terraform sensitive files
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+terraform.tfvars
+
+# Backup files
+*.bak
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/

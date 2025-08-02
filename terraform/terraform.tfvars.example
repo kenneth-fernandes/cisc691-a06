@@ -1,0 +1,32 @@
+# Terraform variables example file
+# Copy this to terraform.tfvars and fill in your values
+
+# Required: Your GCP project ID
+project_id = "your-gcp-project-id"
+
+# Optional: Override defaults for cost optimization
+region = "us-central1"  # Cheapest region
+zone   = "us-central1-a"
+
+# Environment
+environment = "dev"
+
+# Cost-optimized node configuration
+machine_type    = "e2-medium"    # 2 vCPU, 4GB RAM - $24.45/month full price
+node_count      = 2              # Initial nodes
+min_node_count  = 1              # Minimum for autoscaling  
+max_node_count  = 3              # Maximum for autoscaling
+preemptible     = true           # 60-80% cost savings
+disk_size_gb    = 20             # Minimum disk size
+
+# Registry location
+artifact_registry_location = "us-central1"
+
+# Cost estimation (with preemptible nodes)
+estimated_monthly_cost = {
+  cluster_management = "$74.40"    # GKE management fee
+  nodes_preemptible  = "$14.67"    # 2x e2-medium preemptible 
+  storage           = "$8.00"      # 40GB persistent disks
+  networking        = "$5.00"      # Load balancer + egress
+  total_estimated   = "$102.07"    # Total monthly
+}

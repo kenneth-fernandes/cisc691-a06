@@ -1,12 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: web
+  name: web-lb
   namespace: visa-app
 spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8501
+    protocol: TCP
   selector:
     app: web
-  ports:
-  - port: 8501
-    targetPort: 8501
-  type: ClusterIP

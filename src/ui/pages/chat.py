@@ -84,8 +84,8 @@ def get_welcome_message():
             data_status = ""
             
             if "error" not in db_stats:
-                total_records = db_stats.get('total_records', 'N/A')
-                latest_bulletin = db_stats.get('latest_bulletin_date', 'N/A')
+                total_records = db_stats.get('total_bulletins', 'N/A')
+                latest_bulletin = db_stats.get('database_stats', {}).get('latest_bulletin', 'N/A')
                 data_status = f"\n\n📊 **Data Status**: {total_records} records available | Latest: {latest_bulletin}"
             
         except:

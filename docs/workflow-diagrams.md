@@ -214,65 +214,105 @@ journey
 | **Visa Tools** | - | - | Data Provider | ✓ | SQL Queries |
 | **Database** | - | - | - | Data Storage | ✓ |
 
-## Technology Stack Overview
+## Complete Technology Stack
 
 ```mermaid
-graph LR
-    subgraph "Frontend"
-        ST[Streamlit 1.28+]
-        HTML[HTML/CSS/JS]
+graph TB
+    subgraph "Frontend Technologies"
+        ST[Streamlit 1.28+<br/>Multi-page UI Framework]
+        PLOTLY[Plotly 5.15+<br/>Interactive Charts]
+        HTML[HTML/CSS/JS<br/>Custom Styling]
     end
     
-    subgraph "Backend"
-        FA[FastAPI 0.104+]
-        UV[Uvicorn ASGI]
+    subgraph "Backend Technologies"
+        FA[FastAPI 0.100+<br/>REST API Framework]
+        UV[Uvicorn ASGI<br/>Production Server]
+        PYDANTIC[Pydantic 2.0+<br/>Data Validation]
     end
     
-    subgraph "AI/ML"
-        LC[LangChain 0.1+]
-        OPENAI[OpenAI GPT]
-        ANTHROPIC[Claude]
-        GOOGLE[Gemini]
-        OLLAMA[Ollama Local]
+    subgraph "AI/ML Technologies"
+        LC[LangChain 0.1+<br/>Agent Framework]
+        SKLEARN[scikit-learn 1.3+<br/>ML Models]
+        NUMPY[NumPy 1.24+<br/>Numerical Computing]
+        PANDAS[Pandas 2.0+<br/>Data Processing]
     end
     
-    subgraph "Database"
-        PG[PostgreSQL]
-        SL[SQLite]
-        CACHE[Redis Cache]
+    subgraph "LLM Providers"
+        OPENAI[OpenAI GPT<br/>gpt-4 and gpt-3.5-turbo]
+        ANTHROPIC[Anthropic Claude<br/>claude-3.5-sonnet]
+        GOOGLE[Google Gemini<br/>gemini-1.5-flash]
+        OLLAMA[Ollama Local<br/>llama-3.2 and phi-3]
     end
     
-    subgraph "Infrastructure"
-        DOCKER[Docker Compose]
-        NGINX[Nginx Proxy]
+    subgraph "Database Technologies"
+        PG[PostgreSQL 15<br/>Primary Database]
+        SQLITE[SQLite<br/>Development/Fallback]
+        REDIS[Redis 7.0<br/>Caching Layer]
+        PSYCOPG[psycopg2-binary<br/>PostgreSQL Driver]
     end
     
+    subgraph "Data Processing"
+        BS4[BeautifulSoup4<br/>Web Scraping]
+        REQUESTS[Requests<br/>HTTP Client]
+        PYPDF[PyPDF2<br/>PDF Processing]
+        LXML[LXML<br/>XML/HTML Parser]
+    end
+    
+    subgraph "Infrastructure & DevOps"
+        DOCKER[Docker and Docker Compose<br/>Containerization]
+        K8S[Kubernetes GKE<br/>Orchestration]
+        TERRAFORM[Terraform<br/>Infrastructure as Code]
+        PYTEST[pytest<br/>Testing Framework]
+    end
+    
+    %% Technology connections
     ST --> FA
+    ST --> PLOTLY
+    FA --> PYDANTIC
+    FA --> UV
     FA --> LC
+    
     LC --> OPENAI
-    LC --> ANTHROPIC
+    LC --> ANTHROPIC  
     LC --> GOOGLE
     LC --> OLLAMA
+    LC --> SKLEARN
+    
     FA --> PG
-    FA --> SL
-    FA --> CACHE
+    FA --> SQLITE
+    FA --> REDIS
+    PG --> PSYCOPG
+    
+    LC --> BS4
+    BS4 --> REQUESTS
+    BS4 --> PYPDF
+    BS4 --> LXML
+    
+    SKLEARN --> NUMPY
+    SKLEARN --> PANDAS
+    
     DOCKER --> ST
     DOCKER --> FA
     DOCKER --> PG
-    NGINX --> DOCKER
+    DOCKER --> REDIS
+    K8S --> DOCKER
     
-    %% Styling with vibrant contrasting colors
-    classDef frontend fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    classDef backend fill:#c62828,stroke:#b71c1c,stroke-width:3px,color:#ffffff
-    classDef aiml fill:#1565c0,stroke:#0d47a1,stroke-width:3px,color:#ffffff
-    classDef database fill:#6a1b9a,stroke:#4a148c,stroke-width:3px,color:#ffffff
-    classDef infrastructure fill:#ef6c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    %% Styling with professional colors
+    classDef frontend fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#ffffff
+    classDef backend fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#ffffff
+    classDef aiml fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#ffffff
+    classDef llm fill:#9c27b0,stroke:#6a1b9a,stroke-width:3px,color:#ffffff
+    classDef database fill:#607d8b,stroke:#455a64,stroke-width:3px,color:#ffffff
+    classDef processing fill:#795548,stroke:#5d4037,stroke-width:3px,color:#ffffff
+    classDef infrastructure fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#ffffff
     
-    class ST,HTML frontend
-    class FA,UV backend
-    class LC,OPENAI,ANTHROPIC,GOOGLE,OLLAMA aiml
-    class PG,SL,CACHE database
-    class DOCKER,NGINX infrastructure
+    class ST,PLOTLY,HTML frontend
+    class FA,UV,PYDANTIC backend
+    class LC,SKLEARN,NUMPY,PANDAS aiml
+    class OPENAI,ANTHROPIC,GOOGLE,OLLAMA llm
+    class PG,SQLITE,REDIS,PSYCOPG database
+    class BS4,REQUESTS,PYPDF,LXML processing
+    class DOCKER,K8S,TERRAFORM,PYTEST infrastructure
 ```
 
 ## Database Schema Visualization
@@ -640,44 +680,44 @@ graph TB
 flowchart TD
     START([Start Deployment]) --> MINIKUBE_CHECK{Minikube Running?}
     MINIKUBE_CHECK -->|No| START_MINIKUBE[minikube start]
-    MINIKUBE_CHECK -->|Yes| DOCKER_ENV[eval $(minikube docker-env)]
+    MINIKUBE_CHECK -->|Yes| DOCKER_ENV[Set Docker Environment]
     START_MINIKUBE --> DOCKER_ENV
     
     DOCKER_ENV --> BUILD_IMAGES[Build Docker Images]
-    BUILD_IMAGES --> BUILD_API[docker build -f Dockerfile.api -t visa-app-api:latest .]
-    BUILD_IMAGES --> BUILD_WEB[docker build -f Dockerfile.web -t visa-app-web:latest .]
+    BUILD_IMAGES --> BUILD_API[Build API Container]
+    BUILD_IMAGES --> BUILD_WEB[Build Web Container]
     
     BUILD_API --> DEPLOY_INFRA[Deploy Infrastructure]
     BUILD_WEB --> DEPLOY_INFRA
     
-    DEPLOY_INFRA --> CREATE_NS[kubectl apply -f k8s/namespace.yaml]
-    CREATE_NS --> DEPLOY_SECRETS[kubectl apply -f k8s/secrets/]
-    DEPLOY_SECRETS --> DEPLOY_CONFIG[kubectl apply -f k8s/configmaps/]
-    DEPLOY_CONFIG --> DEPLOY_STORAGE[kubectl apply -f k8s/volumes/]
+    DEPLOY_INFRA --> CREATE_NS[Create Namespace]
+    CREATE_NS --> DEPLOY_SECRETS[Deploy Secrets]
+    DEPLOY_SECRETS --> DEPLOY_CONFIG[Deploy Config Maps]
+    DEPLOY_CONFIG --> DEPLOY_STORAGE[Deploy Storage Volumes]
     
     DEPLOY_STORAGE --> DEPLOY_DB[Deploy Database Layer]
-    DEPLOY_DB --> PG_DEPLOY[kubectl apply -f k8s/deployments/postgres.yaml]
-    PG_DEPLOY --> PG_SERVICE[kubectl apply -f k8s/services/postgres-service.yaml]
-    PG_SERVICE --> PG_WAIT[kubectl wait --for=condition=ready pod -l app=postgres]
+    DEPLOY_DB --> PG_DEPLOY[Deploy PostgreSQL]
+    PG_DEPLOY --> PG_SERVICE[Create PostgreSQL Service]
+    PG_SERVICE --> PG_WAIT[Wait for PostgreSQL Ready]
     
     PG_WAIT --> DEPLOY_CACHE[Deploy Cache Layer]
-    DEPLOY_CACHE --> REDIS_DEPLOY[kubectl apply -f k8s/deployments/redis.yaml]
-    REDIS_DEPLOY --> REDIS_SERVICE[kubectl apply -f k8s/services/redis-service.yaml]
-    REDIS_SERVICE --> REDIS_WAIT[kubectl wait --for=condition=ready pod -l app=redis]
+    DEPLOY_CACHE --> REDIS_DEPLOY[Deploy Redis Cache]
+    REDIS_DEPLOY --> REDIS_SERVICE[Create Redis Service]
+    REDIS_SERVICE --> REDIS_WAIT[Wait for Redis Ready]
     
     REDIS_WAIT --> DEPLOY_APP[Deploy Application Layer]
-    DEPLOY_APP --> API_DEPLOY[kubectl apply -f k8s/deployments/api.yaml]
-    API_DEPLOY --> API_SERVICE[kubectl apply -f k8s/services/api-service.yaml]
-    API_SERVICE --> API_WAIT[kubectl wait --for=condition=ready pod -l app=api]
+    DEPLOY_APP --> API_DEPLOY[Deploy API Service]
+    API_DEPLOY --> API_SERVICE[Create API Service]
+    API_SERVICE --> API_WAIT[Wait for API Ready]
     
-    API_WAIT --> WEB_DEPLOY[kubectl apply -f k8s/deployments/web.yaml]
-    WEB_DEPLOY --> WEB_SERVICE[kubectl apply -f k8s/services/web-service.yaml]
-    WEB_SERVICE --> WEB_WAIT[kubectl wait --for=condition=ready pod -l app=web]
+    API_WAIT --> WEB_DEPLOY[Deploy Web Service]
+    WEB_DEPLOY --> WEB_SERVICE[Create Web Service]
+    WEB_SERVICE --> WEB_WAIT[Wait for Web Ready]
     
     WEB_WAIT --> VERIFY[Verify Deployment]
-    VERIFY --> CHECK_PODS[kubectl get pods -n visa-app]
-    CHECK_PODS --> CHECK_SERVICES[kubectl get services -n visa-app]
-    CHECK_SERVICES --> ACCESS_APP[minikube service web -n visa-app]
+    VERIFY --> CHECK_PODS[Check Pod Status]
+    CHECK_PODS --> CHECK_SERVICES[Check Service Status]
+    CHECK_SERVICES --> ACCESS_APP[Access Application]
     ACCESS_APP --> END([Deployment Complete])
     
     %% Error handling

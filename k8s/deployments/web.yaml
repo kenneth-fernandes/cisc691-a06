@@ -4,7 +4,7 @@ metadata:
   name: web
   namespace: visa-app
 spec:
-  replicas: 1
+  # Replicas managed by HPA (min: 1, max: 2)
   selector:
     matchLabels:
       app: web
@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: web
-        image: visa-app-web:latest
-        imagePullPolicy: Never
+        image: us-central1-docker.pkg.dev/agent-visa-467603/agentvisa/visa-app-web:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8501
         env:
@@ -25,6 +25,28 @@ spec:
             configMapKeyRef:
               name: app-config
               key: API_BASE_URL
+        - name: POSTGRES_HOST
+          value: postgres
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: postgres-password
+        # PostgreSQL connection URL constructed from individual variables
+        - name: DATABASE_URL
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
         - name: PYTHONPATH
           valueFrom:
             configMapKeyRef:
@@ -59,18 +81,31 @@ spec:
           httpGet:
             path: /_stcore/health
             port: 8501
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 45   # Allow time for Streamlit to start
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /_stcore/health
             port: 8501
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10      # Allow 100 seconds for startup
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "150m"
+            memory: "256Mi"   # Adequate for Streamlit
+            cpu: "100m"       # Baseline CPU
           limits:
-            memory: "512Mi"
-            cpu: "300m"
+            memory: "512Mi"   # Allow for user sessions
+            cpu: "300m"       # Allow CPU bursting
