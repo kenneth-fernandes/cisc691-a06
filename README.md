@@ -6,6 +6,7 @@
 AgentVisa is a containerized AI assistant with REST API backend that provides intelligent US visa bulletin analysis and multi-provider LLM chat capabilities.
 
 ## 📑 Table of Contents
+- [📋 Project Documents](#-project-documents)
 - [✨ Features](#-features)
 - [🚀 Quick Start](#-quick-start)
 - [🐳 Docker Services](#-docker-services)
@@ -15,6 +16,15 @@ AgentVisa is a containerized AI assistant with REST API backend that provides in
 - [📊 System Architecture & Documentation](#-system-architecture--documentation)
 - [🎯 Visual System Overview](#-visual-system-overview)
 - [📝 Project Information](#-project-information)
+
+## 📋 Project Documents
+
+### 📄 Official Course Submission
+- **[A06 Project Report (PDF)](docs/report/A06_AgentVisa_Project_Report.pdf)** - Comprehensive technical report covering system architecture, implementation details, and deployment strategies
+- **[AgentVisa Presentation (PDF)](docs/report/AgentVisa_Presentation.pdf)** - Visual presentation showcasing key features, technical stack, and project demonstrations
+
+### 📚 Additional Documentation
+For detailed technical documentation, architecture diagrams, and deployment guides, see the [System Architecture & Documentation](#-system-architecture--documentation) section below.
 
 ## ✨ Features
 
